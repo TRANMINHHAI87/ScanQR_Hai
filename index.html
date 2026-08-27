@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Máy Quét QR Mượt Mà</title>
-    <!-- Gọi trực tiếp file trong cùng thư mục GitHub -->
+    <title>Trình Quét Mã QR CCCD Thông Minh</title>
     <script src="jsQR.min.js"></script>
     <style>
         * { box-sizing: border-box; }
@@ -17,27 +16,28 @@
         
         .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
         select { 
-            padding: 10px; border-radius: 8px; border: 1px solid #ccc; 
-            font-size: 16px; width: 100%; outline: none;
+            padding: 12px; border-radius: 8px; border: 1px solid #1a73e8; 
+            font-size: 16px; width: 100%; outline: none; background-color: white; color: #1a73e8; font-weight: bold;
         }
         
-        /* Chứa Video và Canvas chồng lên nhau */
+        .user-tip {
+            background-color: #e8f0fe; color: #1557b0; padding: 15px;
+            border-radius: 8px; border-left: 5px solid #1a73e8; margin-bottom: 15px;
+            font-size: 14px; line-height: 1.5; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
         .video-container { 
             position: relative; width: 100%; border-radius: 12px; 
             overflow: hidden; background: #000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        
-        /* Video hiển thị trực tiếp -> Đảm bảo độ mượt tối đa */
         #video { width: 100%; display: block; object-fit: cover; }
-        
-        /* Canvas giờ chỉ để vẽ khung đỏ và trong suốt đè lên video */
         #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
         #zoom-container { 
-            display: none; background: #fff; padding: 10px; 
-            border-radius: 8px; margin-top: 10px; text-align: center;
+            display: none; background: #fff; padding: 15px; 
+            border-radius: 8px; margin-top: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        #zoom-slider { width: 100%; margin-top: 5px; }
+        #zoom-slider { width: 100%; margin-top: 10px; height: 10px; }
 
         #scan-indicator { text-align: center; font-size: 14px; color: #666; margin-top: 10px; }
         
@@ -64,7 +64,7 @@
 </head>
 <body>
 
-    <h2>Trình Quét Mã QR</h2>
+    <h2>Trình Quét Mã QR CCCD Thông Minh</h2>
     
     <div class="controls">
         <select id="camera-select">
@@ -72,17 +72,19 @@
         </select>
     </div>
 
+    <div class="user-tip">
+        <b>Lời khuyên cho mã QR nhỏ trên CCCD:</b><br>
+        Để camera cách xa thẻ khoảng 10-15cm để máy tự lấy nét được, sau đó dùng thanh kéo <b>Zoom</b> bên dưới để phóng đại mã QR lên. Đừng đưa camera quá gần gây mờ hình!
+    </div>
+
     <div class="video-container">
-        <!-- Video hiển thị mượt mà -->
         <video id="video" playsinline autoplay></video>
-        <!-- Canvas nằm đè lên để vẽ viền đỏ -->
         <canvas id="canvas"></canvas>
     </div>
 
-    <!-- Thanh kéo Zoom (chỉ hiện nếu camera máy hỗ trợ) -->
     <div id="zoom-container">
-        <label><b>Phóng to (Zoom) ống kính</b></label>
-        <input type="range" id="zoom-slider">
+        <label><b>Phóng to ống kính (Zoom)</b></label>
+        <input type="range" id="zoom-slider" min="1" max="1" step="0.1" value="1">
     </div>
 
     <div id="scan-indicator">Đang khởi động...</div>
@@ -111,9 +113,8 @@
 
         let currentStream = null;
         let lastScannedData = "";
-        let scanInterval = null;
+        let scanActive = true;
 
-        // Xử lý nắn tọa độ vẽ lên Canvas sao cho khớp với kích thước Video thực tế
         function drawLine(begin, end, color) {
             canvas.beginPath();
             canvas.moveTo(begin.x, begin.y);
@@ -131,11 +132,12 @@
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
             }
-            // Yêu cầu camera với độ phân giải cao để đọc QR nhỏ rõ hơn
+
+            // Yêu cầu độ phân giải siêu cao để phục vụ Zoom
             const constraints = {
                 video: deviceId 
-                    ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } } 
-                    : { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
+                    ? { deviceId: { exact: deviceId }, width: { ideal: 4096 }, height: { ideal: 2160 } } 
+                    : { facingMode: "environment", width: { ideal: 4096 }, height: { ideal: 2160 } }
             };
 
             try {
@@ -146,20 +148,24 @@
                 
                 scanIndicator.innerText = "Sẵn sàng quét mã!";
 
-                // Can thiệp sâu vào ống kính camera sau khi đã bật
                 const track = currentStream.getVideoTracks()[0];
                 const capabilities = track.getCapabilities ? track.getCapabilities() : null;
 
-                // 1. Ép ống kính lấy nét liên tục (nếu trình duyệt/thiết bị hỗ trợ)
-                try {
-                    await track.applyConstraints({
-                        advanced: [{ focusMode: "continuous" }]
-                    });
-                } catch (e) {
-                    console.log("Thiết bị không hỗ trợ ép lấy nét API: ", e);
+                // 1. Cố gắng kích hoạt các chế độ lấy nét nâng cao
+                if (capabilities && capabilities.focusMode) {
+                    try {
+                        // Ưu tiên 'macro' nếu có, nếu không thì 'continuous'
+                        const focusMode = capabilities.focusMode.includes('macro') ? 'macro' : 'continuous';
+                        await track.applyConstraints({
+                            advanced: [{ focusMode: focusMode }]
+                        });
+                        console.log(`Đã áp dụng focusMode: ${focusMode}`);
+                    } catch (e) {
+                        console.log("Không thể ép chế độ lấy nét nâng cao:", e);
+                    }
                 }
 
-                // 2. Kích hoạt tính năng Zoom
+                // 2. Kích hoạt thanh Zoom
                 if (capabilities && capabilities.zoom) {
                     zoomContainer.style.display = "block";
                     zoomSlider.min = capabilities.zoom.min;
@@ -167,7 +173,6 @@
                     zoomSlider.step = capabilities.zoom.step;
                     zoomSlider.value = track.getSettings().zoom;
 
-                    // Khi người dùng kéo thanh trượt -> Tăng giảm tiêu cự
                     zoomSlider.oninput = async (e) => {
                         try {
                             await track.applyConstraints({
@@ -181,15 +186,15 @@
                     zoomContainer.style.display = "none";
                 }
 
-                // Đợi video chạy rồi mới bắt đầu quét
                 video.addEventListener("loadedmetadata", () => {
                     canvasElement.width = video.videoWidth;
                     canvasElement.height = video.videoHeight;
+                    scanActive = true;
                     requestAnimationFrame(scanQRCode);
                 });
 
             } catch (err) {
-                scanIndicator.innerText = "Lỗi: Không thể truy cập Camera.";
+                scanIndicator.innerText = "Lỗi: Không thể truy cập Camera. Vui lòng cấp quyền.";
             }
         }
 
@@ -200,14 +205,32 @@
                 cameraSelect.innerHTML = "";
                 
                 if (videoDevices.length > 0) {
-                    videoDevices.forEach((device, index) => {
+                    // Phân loại camera sau và trước
+                    const rearCams = videoDevices.filter(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
+                    const frontCams = videoDevices.filter(d => d.label.toLowerCase().includes('front') || d.label.toLowerCase().includes('user'));
+                    const otherCams = videoDevices.filter(d => !rearCams.includes(d) && !frontCams.includes(d));
+
+                    const addOption = (device, labelPrefix) => {
                         const option = document.createElement("option");
                         option.value = device.deviceId;
-                        // Hỗ trợ hiển thị tên cam rõ ràng hơn
-                        option.text = device.label || `Camera ${index + 1}`;
+                        option.text = `${labelPrefix}: ${device.label || ('Camera ' + (cameraSelect.length + 1))}`;
                         cameraSelect.appendChild(option);
-                    });
-                    startCamera(videoDevices[0].deviceId); 
+                    };
+
+                    // Thêm camera sau lên đầu
+                    rearCams.forEach(d => addOption(d, "Mặt sau"));
+                    otherCams.forEach(d => addOption(d, "Camera"));
+                    frontCams.forEach(d => addOption(d, "Mặt trước"));
+
+                    // Tự động chọn camera đầu tiên trong danh sách (đã ưu tiên camera sau)
+                    if (rearCams.length > 0) {
+                        startCamera(rearCams[0].deviceId);
+                    } else if (otherCams.length > 0) {
+                        startCamera(otherCams[0].deviceId);
+                    } else {
+                        startCamera(frontCams[0].deviceId);
+                    }
+
                 } else {
                     cameraSelect.innerHTML = "<option>Không tìm thấy camera</option>";
                 }
@@ -220,23 +243,18 @@
             startCamera(cameraSelect.value);
         });
 
-        // Hàm xử lý ảnh chuyên biệt chạy ngầm
         function scanQRCode() {
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            if (scanActive && video.readyState === video.HAVE_ENOUGH_DATA) {
                 canvasElement.width = video.videoWidth;
                 canvasElement.height = video.videoHeight;
-                
-                // Vẽ khung hình hiện tại từ thẻ <video> lên <canvas> ngầm để tính toán
                 canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
                 const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
                 
-                // Thuật toán quét jsQR
                 const code = jsQR(imageData.data, imageData.width, imageData.height, {
                     inversionAttempts: "dontInvert",
                 });
 
                 if (code) {
-                    // Xóa mảng cũ và vẽ viền đỏ cho mảng mới
                     canvas.clearRect(0, 0, canvasElement.width, canvasElement.height);
                     drawLine(code.location.topLeftCorner, code.location.topRightCorner, "#FF3B58");
                     drawLine(code.location.topRightCorner, code.location.bottomRightCorner, "#FF3B58");
@@ -248,15 +266,14 @@
                         showResult(code.data);
                     }
                 } else {
-                    // Nếu không có mã thì xóa nét vẽ viền cũ
                     canvas.clearRect(0, 0, canvasElement.width, canvasElement.height);
                 }
             }
-            // Gọi lại chính nó liên tục theo nhịp làm mới của màn hình
             requestAnimationFrame(scanQRCode);
         }
 
         function showResult(data) {
+            scanActive = false; // Tạm dừng quét khi có kết quả
             resultContainer.style.display = "block";
             qrContent.innerHTML = "";
             
@@ -271,12 +288,33 @@
             } else {
                 qrContent.innerText = data;
             }
+            
+            scanIndicator.innerText = "Đã tìm thấy mã. Bấm nút Reset để quét mã khác.";
+            
+            const actionButtons = document.getElementById("action-buttons");
+            if (!document.getElementById("btn-reset")) {
+                const resetBtn = document.createElement("button");
+                resetBtn.id = "btn-reset";
+                resetBtn.className = "btn btn-copy";
+                resetBtn.style.backgroundColor = "#ff9800";
+                resetBtn.style.color = "white";
+                resetBtn.innerText = "Quét lại";
+                resetBtn.onclick = () => {
+                    lastScannedData = "";
+                    resultContainer.style.display = "none";
+                    scanActive = true;
+                    scanIndicator.innerText = "Sẵn sàng quét mã!";
+                    resetBtn.remove();
+                };
+                actionButtons.appendChild(resetBtn);
+            }
+
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }
 
         function copyText() {
             navigator.clipboard.writeText(lastScannedData).then(() => {
-                alert("Đã copy dữ liệu vào bộ nhớ tạm!");
+                alert("Đã copy dữ liệu!");
             });
         }
 
@@ -288,7 +326,6 @@
             link.click();
         }
 
-        // Cấp quyền và lấy danh sách camera
         navigator.mediaDevices.getUserMedia({ video: true }).then(() => {
             getCameras();
         }).catch(err => {
