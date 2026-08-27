@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Máy Quét QR Thông Minh</title>
+    <!-- Thư viện jsQR xử lý dò 3 điểm định vị và nắn chỉnh hình ảnh -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            max-width: 600px; 
+            margin: auto; 
+            padding: 15px; 
+            background: #f0f2f5; 
+            color: #333;
+        }
+        h2 { text-align: center; color: #1a73e8; margin-bottom: 10px; }
+        
+        .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        select { 
+            padding: 10px; border-radius: 8px; border: 1px solid #ccc; 
+            font-size: 16px; width: 100%; outline: none;
+        }
+        
+        .video-container { 
+            position: relative; width: 100%; border-radius: 12px; 
+            overflow: hidden; background: #000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        canvas { width: 100%; display: block; }
+        
+        #scan-indicator { text-align: center; font-size: 14px; color: #666; margin-top: 10px; }
+        
+        .result-card { 
+            background: white; padding: 20px; border-radius: 12px; 
+            margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+            display: none; border-left: 5px solid #1a73e8;
+        }
+        .result-card h3 { margin-top: 0; font-size: 18px; }
+        
+        #qr-content { 
+            padding: 15px; background: #f8f9fa; border-radius: 8px; 
+            margin-bottom: 15px; word-break: break-all; font-weight: 500;
+            font-size: 16px;
+        }
+        
+        #action-buttons { display: flex; gap: 10px; }
+        .btn { 
+            flex: 1; border: none; padding: 12px; border-radius: 8px; 
+            cursor: pointer; font-size: 15px; font-weight: bold; transition: 0.2s;
+        }
+        .btn-copy { background: #e8f0fe; color: #1a73e8; }
+        .btn-copy:hover { background: #d2e3fc; }
+        .btn-download { background: #1a73e8; color: white; }
+        .btn-download:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+    <h2>Trình Quét Mã QR</h2>
+    
+    <div class="controls">
+        <select id="camera-select">
+            <option value="">Đang yêu cầu quyền camera...</option>
+        </select>
+    </div>
+
+    <div class="video-container">
+        <!-- Canvas dùng để hiển thị video stream và vẽ khung nắn chỉnh QR -->
+        <canvas id="canvas" hidden></canvas>
+    </div>
+    <div id="scan-indicator">Đang khởi động...</div>
+
+    <div id="result-container" class="result-card">
+        <h3>Dữ liệu tìm thấy:</h3>
+        <div id="qr-content"></div>
+        <div id="action-buttons">
+            <button class="btn btn-copy" onclick="copyText()">Copy Dữ Liệu</button>
+            <button class="btn btn-download" onclick="downloadTxt()">Tải File (.txt)</button>
+        </div>
+    </div>
+
+    <script>
+        const video = document.createElement("video");
+        const canvasElement = document.getElementById("canvas");
+        const canvas = canvasElement.getContext("2d");
+        const cameraSelect = document.getElementById("camera-select");
+        const resultContainer = document.getElementById("result-container");
+        const qrContent = document.getElementById("qr-content");
+        const scanIndicator = document.getElementById("scan-indicator");
+
+        let currentStream = null;
+        let lastScannedData = "";
+
+        // Kiểm tra xem chuỗi có phải là một đường Link hay không
+        function isValidURL(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        // Vẽ khung vuông màu đỏ bao quanh QR (nối 3 điểm định vị + điểm còn lại)
+        function drawLine(begin, end, color) {
+            canvas.beginPath();
+            canvas.moveTo(begin.x, begin.y);
+            canvas.lineTo(end.x, end.y);
+            canvas.lineWidth = 4;
+            canvas.strokeStyle = color;
+            canvas.stroke();
+        }
+
+        // Khởi động Camera
+        async function startCamera(deviceId = null) {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+            const constraints = {
+                video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" }
+            };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                currentStream = stream;
+                video.srcObject = stream;
+                // Bắt buộc cho iOS/Safari để không bị phóng to toàn màn hình
+                video.setAttribute("playsinline", true);
+                video.play();
+                scanIndicator.innerText = "Đưa ống kính về phía mã QR. Hệ thống sẽ tự động nắn thẳng để đọc.";
+                requestAnimationFrame(tick);
+            } catch (err) {
+                scanIndicator.innerText = "Lỗi: Không thể truy cập Camera. Vui lòng cấp quyền.";
+                console.error(err);
+            }
+        }
+
+        // Lấy danh sách các webcam/camera hiện có trên thiết bị
+        async function getCameras() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                cameraSelect.innerHTML = "";
+                
+                if (videoDevices.length > 0) {
+                    videoDevices.forEach((device, index) => {
+                        const option = document.createElement("option");
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${index + 1}`;
+                        cameraSelect.appendChild(option);
+                    });
+                    // Bật camera đầu tiên mặc định
+                    startCamera(videoDevices[0].deviceId); 
+                } else {
+                    cameraSelect.innerHTML = "<option>Không tìm thấy camera</option>";
+                }
+            } catch (err) {
+                console.error("Lỗi liệt kê thiết bị:", err);
+            }
+        }
+
+        // Sự kiện khi người dùng chuyển đổi Camera
+        cameraSelect.addEventListener("change", () => {
+            startCamera(cameraSelect.value);
+        });
+
+        // Vòng lặp quét khung hình liên tục
+        function tick() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvasElement.hidden = false;
+                canvasElement.height = video.videoHeight;
+                canvasElement.width = video.videoWidth;
+                
+                // Vẽ video lên canvas
+                canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                
+                const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                
+                // Thuật toán jsQR: tự tìm 3 ô vuông định vị và nắn khung ảnh
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert", 
+                });
+
+                if (code) {
+                    // Hiển thị khung màu đỏ bao quanh khu vực QR nhận diện được
+                    drawLine(code.location.topLeftCorner, code.location.topRightCorner, "#FF3B58");
+                    drawLine(code.location.topRightCorner, code.location.bottomRightCorner, "#FF3B58");
+                    drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, "#FF3B58");
+                    drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, "#FF3B58");
+
+                    // Nếu mã mới khác mã vừa quét, cập nhật kết quả
+                    if (code.data !== lastScannedData) {
+                        lastScannedData = code.data;
+                        showResult(code.data);
+                    }
+                }
+            }
+            requestAnimationFrame(tick);
+        }
+
+        // Xử lý và hiển thị kết quả
+        function showResult(data) {
+            resultContainer.style.display = "block";
+            qrContent.innerHTML = "";
+            
+            // Nếu là dạng Link (URL)
+            if (isValidURL(data)) {
+                const link = document.createElement("a");
+                link.href = data;
+                link.target = "_blank"; // Mở tab mới
+                link.innerText = data;
+                link.style.color = "#1a73e8";
+                link.style.textDecoration = "underline";
+                qrContent.appendChild(link);
+            } 
+            // Nếu là dạng văn bản/số liệu/thông tin thẻ CCCD
+            else {
+                qrContent.innerText = data;
+            }
+            
+            // Cuộn xuống để xem kết quả dễ hơn
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        // Chức năng Copy
+        function copyText() {
+            navigator.clipboard.writeText(lastScannedData).then(() => {
+                alert("Đã copy dữ liệu vào bộ nhớ tạm!");
+            });
+        }
+
+        // Chức năng Tải xuống file Text (.txt)
+        function downloadTxt() {
+            const blob = new Blob([lastScannedData], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "DuLieuQR_" + new Date().getTime() + ".txt";
+            link.click();
+        }
+
+        // Khởi tạo: Yêu cầu quyền camera lần đầu để trình duyệt cấp phép lấy tên thiết bị
+        navigator.mediaDevices.getUserMedia({ video: true }).then(() => {
+            getCameras();
+        }).catch(err => {
+            scanIndicator.innerText = "Trình duyệt đang chặn quyền sử dụng Camera. Vui lòng cho phép.";
+        });
+    </script>
+</body>
+</html>
