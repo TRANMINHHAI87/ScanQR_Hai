@@ -56,6 +56,7 @@ body{
 .row + .row{margin-top:10px}
 label.lbl{font-size:12px;font-weight:650;color:var(--ink-2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px}
 select,input[type=range]{width:100%}
+input[type=range]{accent-color:var(--brand);height:26px}
 select{
   padding:11px 12px;border-radius:10px;border:1px solid var(--line);
   font-size:15px;background:#fff;color:var(--ink);font-weight:500;appearance:none;
@@ -64,6 +65,18 @@ select{
 }
 select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .col{flex:1;min-width:0}
+.hint{font-size:12.5px;color:var(--ink-3);margin-top:6px;line-height:1.45}
+.pdet{padding:0}
+.pdet summary{
+  padding:14px;cursor:pointer;font-size:14px;font-weight:650;color:var(--ink-2);
+  list-style:none;display:flex;align-items:center;gap:8px;
+}
+.pdet summary::-webkit-details-marker{display:none}
+.pdet summary::before{content:"⚙";font-size:15px;color:var(--brand)}
+.pdet summary::after{content:"▾";margin-left:auto;color:var(--ink-3)}
+.pdet[open] summary::after{content:"▴"}
+.pdet[open] summary{border-bottom:1px solid var(--line)}
+.pdet > div{padding:0 14px 14px}
 
 .chipbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .chip{
@@ -76,9 +89,9 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
 .chip[hidden]{display:none}
 
 /* ---------- Camera ---------- */
-.stage{position:relative;margin-top:14px;border-radius:var(--radius);overflow:hidden;background:#0a0d12;box-shadow:var(--shadow)}
-#video{width:100%;height:auto;display:block}
-#overlay{position:absolute;inset:0;pointer-events:none}
+.stage{position:relative;margin-top:12px;border-radius:var(--radius);overflow:hidden;background:#080b0f;box-shadow:var(--shadow);height:52vh}
+#video{width:100%;height:100%;display:block;object-fit:contain;background:#080b0f}
+#overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .status{
   position:absolute;left:0;right:0;bottom:0;padding:10px 12px;
   background:linear-gradient(transparent,rgba(0,0,0,.68));
@@ -183,39 +196,6 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
 
 <div class="wrap">
 
-  <div class="panel">
-    <label class="lbl" for="camera-select">Camera</label>
-    <select id="camera-select"><option value="">Đang yêu cầu quyền camera…</option></select>
-
-    <div class="row" style="margin-top:12px">
-      <div class="col">
-        <label class="lbl" for="quality-select">Độ phân giải</label>
-        <select id="quality-select">
-          <option value="1280">Nhanh — 1280px</option>
-          <option value="1920" selected>Cân bằng — 1920px</option>
-          <option value="2560">Nét — 2560px</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="chipbar">
-      <button class="chip" id="chip-torch" hidden>Bật đèn</button>
-      <button class="chip" id="chip-focus" hidden>Lấy nét lại</button>
-      <button class="chip on" id="chip-cont">Quét liên tục</button>
-      <button class="chip on" id="chip-sound">Âm báo</button>
-    </div>
-
-    <div id="zoom-box" style="display:none;margin-top:14px">
-      <label class="lbl" for="zoom-slider">Phóng to ống kính <span id="zoom-val" style="float:right;font-family:var(--mono);color:var(--brand)">1.0×</span></label>
-      <input type="range" id="zoom-slider" min="1" max="1" step="0.1" value="1">
-    </div>
-
-    <div id="focus-box" style="display:none;margin-top:14px">
-      <label class="lbl" for="focus-slider">Nét gần (macro) <span id="focus-val" style="float:right;font-family:var(--mono);color:var(--brand)">auto</span></label>
-      <input type="range" id="focus-slider" min="0" max="1" step="0.01" value="0">
-    </div>
-  </div>
-
   <div class="stage">
     <video id="video" playsinline autoplay muted></video>
     <canvas id="overlay"></canvas>
@@ -225,8 +205,46 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
     </div>
   </div>
 
+  <div class="panel">
+    <label class="lbl" for="roi-slider">Vùng quét <span id="roi-val" style="float:right;font-family:var(--mono);color:var(--brand)">60%</span></label>
+    <input type="range" id="roi-slider" min="25" max="100" step="5" value="60">
+    <div class="hint">Kéo nhỏ lại khi mã QR bé — vùng càng hẹp thì mã càng nét với bộ giải mã.</div>
+
+    <div id="zoom-box" style="display:none;margin-top:14px">
+      <label class="lbl" for="zoom-slider">Phóng ống kính <span id="zoom-val" style="float:right;font-family:var(--mono);color:var(--brand)">1.0×</span></label>
+      <input type="range" id="zoom-slider" min="1" max="1" step="0.1" value="1">
+    </div>
+
+    <div class="chipbar">
+      <button class="chip" id="chip-torch" hidden>Bật đèn</button>
+      <button class="chip" id="chip-focus" hidden>Lấy nét lại</button>
+      <button class="chip on" id="chip-cont">Quét liên tục</button>
+      <button class="chip on" id="chip-sound">Âm báo</button>
+    </div>
+  </div>
+
+  <details class="panel pdet">
+    <summary>Camera và độ phân giải</summary>
+    <div style="padding-top:12px">
+      <label class="lbl" for="camera-select">Camera</label>
+      <select id="camera-select"><option value="">Đang yêu cầu quyền camera…</option></select>
+
+      <label class="lbl" for="quality-select" style="margin-top:12px">Độ phân giải</label>
+      <select id="quality-select">
+        <option value="1280">Nhanh — 1280px</option>
+        <option value="1920" selected>Cân bằng — 1920px</option>
+        <option value="2560">Nét — 2560px</option>
+      </select>
+
+      <div id="focus-box" style="display:none;margin-top:14px">
+        <label class="lbl" for="focus-slider">Nét gần (macro) <span id="focus-val" style="float:right;font-family:var(--mono);color:var(--brand)">auto</span></label>
+        <input type="range" id="focus-slider" min="0" max="1" step="0.01" value="0">
+      </div>
+    </div>
+  </details>
+
   <div class="tip">
-    <b>Quét mã nhỏ trên CCCD:</b> đặt thẻ vào khung vuông giữa màn hình, cách ống kính 12–18&nbsp;cm cho máy bắt nét, rồi kéo <b>Zoom</b> để phóng mã lên. Đưa quá gần sẽ mất nét.
+    <b>Mã QR trên CCCD:</b> đặt thẻ lọt vào khung sáng giữa màn hình, cách ống kính 12–18&nbsp;cm cho máy bắt nét, rồi kéo <b>Vùng quét</b> hẹp lại quanh mã.
   </div>
 
   <div class="result" id="result">
@@ -310,15 +328,18 @@ function nowStr(){ const d=new Date(); return pad2(d.getHours())+":"+pad2(d.getM
 const WORK = document.createElement("canvas");
 const WCTX = WORK.getContext("2d", { willReadFrequently:true });
 
-/* crop = tỉ lệ vùng lấy ở giữa khung, target = cạnh dài sau khi thu nhỏ */
+/* roi = tỉ lệ vùng quét giữa khung, người dùng kéo được.
+   mul = nhân thêm cho từng lượt; full = quét toàn khung để không bỏ sót mã ngoài vùng. */
+let roi = 0.60;
 const PASSES = [
-  { crop:0.58, target:640 },              // vùng giữa — ưu tiên, CCCD nằm ở đây
-  { crop:1.00, target:640 },              // toàn khung
-  { crop:0.58, target:640 },
-  { crop:0.36, target:560 },              // zoom số, mã siêu nhỏ
-  { crop:0.58, target:640 },
-  { crop:1.00, target:600, invert:true }  // nền tối
+  { mul:1.00, target:640 },
+  { mul:0.62, target:560 },
+  { mul:1.00, target:640 },
+  { full:true, target:640 },
+  { mul:1.00, target:640 },
+  { full:true, target:600, invert:true }
 ];
+const cropOf = p => p.full ? 1 : Math.max(0.15, Math.min(1, roi * p.mul));
 let passIdx = 0;
 
 let detector = null;          // BarcodeDetector
@@ -346,61 +367,97 @@ async function initDetector(){
       }
     }catch(e){ detector = null; }
   }
-  $("engine-tag").textContent = "Bộ giải mã: " + name;
+  $("engine-tag").textContent = detector
+    ? ("Bộ giải mã: " + name)
+    : (hasJsQR ? "Bộ giải mã: jsQR — Chrome sẽ nhanh hơn nhiều" : "Bộ giải mã: —");
   if (!detector && !hasJsQR){
     scanIndicator.textContent = "Thiếu jsQR.min.js — đặt file cạnh index.html";
   }
 }
 
+const stage = document.querySelector(".stage");
+/* Ép khung camera đúng tỉ lệ luồng hình để không thừa viền đen,
+   nhưng chặn trần chiều cao để phần kết quả không bị đẩy khỏi màn hình. */
+function fitStage(){
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw || !vh) return;
+  const w = stage.getBoundingClientRect().width;
+  if (!w) return;
+  const maxH = Math.min(window.innerHeight * 0.62, 560);
+  stage.style.height = Math.round(Math.min(maxH, w * vh / vw)) + "px";
+  sizeOverlay();
+}
+
 function sizeOverlay(){
   const r = video.getBoundingClientRect();
-  if (!r.width) return;
+  if (!r.width || !r.height) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  overlay.width  = Math.round(r.width  * dpr);
-  overlay.height = Math.round(r.height * dpr);
+  const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+  if (overlay.width !== w || overlay.height !== h){ overlay.width = w; overlay.height = h; }
 }
-window.addEventListener("resize", sizeOverlay);
+window.addEventListener("resize", fitStage);
+window.addEventListener("orientationchange", () => setTimeout(fitStage, 250));
+/* video chưa có kích thước thật lúc loadedmetadata trên vài trình duyệt —
+   theo dõi cả ô chứa lẫn kích thước nội tại thì khung ngắm mới đặt đúng chỗ */
+video.addEventListener("resize", fitStage);
+if (window.ResizeObserver) new ResizeObserver(sizeOverlay).observe(video);
 
-/* Vẽ khung ngắm + viền mã tìm được. Toạ độ nguồn là hệ toạ độ video. */
+/* Video dùng object-fit:contain nên có viền đen — quy đổi toạ độ khung hình sang canvas */
+function fit(){
+  const cw = overlay.width, ch = overlay.height;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!cw || !ch || !vw || !vh) return null;
+  const s = Math.min(cw/vw, ch/vh);
+  return { s, ox:(cw - vw*s)/2, oy:(ch - vh*s)/2, vw, vh };
+}
+
+/* Vẽ vùng quét thật (đúng vùng jsQR đang đọc) + viền mã tìm được */
 function paint(corners){
-  const vw = video.videoWidth;
-  if (!vw || !overlay.width) return;
-  const s = overlay.width / vw;
-  octx.clearRect(0,0,overlay.width,overlay.height);
-
-  if (corners){
-    octx.beginPath();
-    octx.moveTo(corners[0].x*s, corners[0].y*s);
-    for (let i=1;i<corners.length;i++) octx.lineTo(corners[i].x*s, corners[i].y*s);
-    octx.closePath();
-    octx.lineWidth = Math.max(3, overlay.width/140);
-    octx.strokeStyle = "#26d07c";   /* sáng hơn màu thương hiệu để nổi trên nền video */
-    octx.stroke();
-    octx.fillStyle = "rgba(38,208,124,.20)";
-    octx.fill();
-    return;
-  }
-
-  /* khung ngắm vùng crop ưu tiên */
+  const f = fit(); if (!f) return;
   const W = overlay.width, H = overlay.height;
-  const side = Math.min(W,H) * 0.58;
-  const x = (W-side)/2, y = (H-side)/2, c = side*0.16;
-  octx.strokeStyle = "rgba(255,255,255,.85)";
-  octx.lineWidth = Math.max(2.5, W/200);
+  octx.clearRect(0,0,W,H);
+
+  const bw = f.vw*roi*f.s, bh = f.vh*roi*f.s;
+  const bx = f.ox + (f.vw*f.s - bw)/2, by = f.oy + (f.vh*f.s - bh)/2;
+
+  octx.fillStyle = "rgba(0,0,0,.42)";
+  octx.fillRect(0,0,W,by);
+  octx.fillRect(0,by+bh,W,H-(by+bh));
+  octx.fillRect(0,by,bx,bh);
+  octx.fillRect(bx+bw,by,W-(bx+bw),bh);
+
+  const c = Math.min(bw,bh)*0.18;
+  octx.strokeStyle = "rgba(255,255,255,.92)";
+  octx.lineWidth = Math.max(3, W/160);
   octx.lineCap = "round";
   const corner = (cx,cy,dx,dy)=>{
     octx.beginPath();
     octx.moveTo(cx+dx*c, cy); octx.lineTo(cx, cy); octx.lineTo(cx, cy+dy*c);
     octx.stroke();
   };
-  corner(x,y,1,1); corner(x+side,y,-1,1); corner(x+side,y+side,-1,-1); corner(x,y+side,1,-1);
+  corner(bx,by,1,1); corner(bx+bw,by,-1,1); corner(bx+bw,by+bh,-1,-1); corner(bx,by+bh,1,-1);
+
+  if (corners && corners.length === 4){
+    octx.beginPath();
+    corners.forEach((p,i)=>{
+      const x = p.x*f.s + f.ox, y = p.y*f.s + f.oy;
+      i ? octx.lineTo(x,y) : octx.moveTo(x,y);
+    });
+    octx.closePath();
+    octx.lineWidth = Math.max(4, W/110);
+    octx.strokeStyle = "#26d07c";   /* sáng hơn màu thương hiệu để nổi trên nền video */
+    octx.stroke();
+    octx.fillStyle = "rgba(38,208,124,.20)";
+    octx.fill();
+  }
 }
 
 /* Một lượt jsQR trên vùng crop đã thu nhỏ */
 function jsPass(p){
   const vw = video.videoWidth, vh = video.videoHeight;
   if (!vw || !vh) return null;
-  const sw = Math.round(vw*p.crop), sh = Math.round(vh*p.crop);
+  const crop = cropOf(p);
+  const sw = Math.round(vw*crop), sh = Math.round(vh*crop);
   const sx = ((vw-sw)/2)|0, sy = ((vh-sh)/2)|0;
   const k  = Math.min(1, p.target / Math.max(sw,sh));
   const dw = Math.max(1, Math.round(sw*k)), dh = Math.max(1, Math.round(sh*k));
@@ -470,15 +527,31 @@ async function tick(){
 }
 
 /* Chỉ cho phép đúng 1 vòng lặp sống tại một thời điểm.
-   Không có cờ này thì mỗi lần bấm "Quét mã tiếp theo" hay đổi camera
-   sẽ sinh thêm một vòng lặp nữa, càng dùng càng tụt fps. */
-let pending = false;
+   Firefox Android có requestVideoFrameCallback nhưng nhiều lúc không bắn callback,
+   làm vòng lặp đứng hẳn (0 fps). Watchdog 400ms phát hiện rồi rơi về rAF vĩnh viễn. */
+let pending = false, watchdog = null;
+let useRVFC = typeof video.requestVideoFrameCallback === "function";
 function schedule(){
   if (pending) return;
   pending = true;
-  const run = () => { pending = false; tick(); };
-  if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(run);
-  else requestAnimationFrame(run);
+  const run = () => {
+    if (!pending) return;
+    pending = false;
+    if (watchdog){ clearTimeout(watchdog); watchdog = null; }
+    tick();
+  };
+  if (useRVFC){
+    video.requestVideoFrameCallback(run);
+    watchdog = setTimeout(() => {
+      if (pending){
+        useRVFC = false;
+        perfEl.textContent = "";
+        run();
+      }
+    }, 400);
+  } else {
+    requestAnimationFrame(run);
+  }
 }
 
 /* ==================================================================
@@ -521,6 +594,7 @@ function startCamera(deviceId = null){
 }
 
 function onMeta(){
+  fitStage();
   sizeOverlay();
   scanActive = true;
   schedule();
@@ -542,7 +616,7 @@ function setupZoom(caps){
 
 function setupFocus(caps){
   const box = $("focus-box"), sl = $("focus-slider"), val = $("focus-val"), chip = $("chip-focus");
-  chip.hidden = false;
+  chip.hidden = !(caps && caps.focusMode);
   chip.onclick = async () => {
     try{
       await track.applyConstraints({ advanced:[{ focusMode:"manual" }] });
@@ -1146,6 +1220,11 @@ $("btn-export").onclick = () => {
 
 $("chip-cont").onclick  = e => e.currentTarget.classList.toggle("on");
 $("chip-sound").onclick = e => e.currentTarget.classList.toggle("on");
+$("roi-slider").oninput = e => {
+  roi = parseInt(e.target.value,10)/100;
+  $("roi-val").textContent = e.target.value + "%";
+  paint(null);
+};
 
 /* ==================================================================
    5. KHỞI ĐỘNG
