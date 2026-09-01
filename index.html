@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Quét QR CCCD &amp; VietQR — v2.1</title>
+<title>Quét QR CCCD &amp; VietQR — v2.4</title>
 <script src="jsQR.min.js"></script>
 <style>
 :root{
@@ -89,8 +89,8 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
 .chip[hidden]{display:none}
 
 /* ---------- Camera ---------- */
-.stage{position:relative;margin-top:12px;border-radius:var(--radius);overflow:hidden;background:#080b0f;box-shadow:var(--shadow);height:52vh}
-#video{width:100%;height:100%;display:block;object-fit:contain;background:#080b0f}
+.stage{position:relative;margin-top:12px;border-radius:var(--radius);overflow:hidden;background:#080b0f;box-shadow:var(--shadow);height:min(56vh,470px)}
+#video{width:100%;height:100%;display:block;object-fit:cover;background:#080b0f}
 #overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .status{
   position:absolute;left:0;right:0;bottom:0;padding:10px 12px;
@@ -152,6 +152,20 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
 .btn-primary{background:var(--brand);color:#fff}
 .btn-ghost{background:var(--brand-soft);color:var(--brand)}
 .btn-amber{background:#fff3e0;color:#b06000}
+.btn-action{background:var(--brand);color:#fff;font-size:16px;padding:15px 10px}
+#bankpick{border-top:1px solid var(--line);background:#f8fafc;padding:12px 14px}
+.bp-note{font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-bottom:10px;
+  background:var(--warn-soft);border-left:3px solid var(--warn);padding:9px 11px;border-radius:8px}
+.bp-head{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--ink-3);margin:10px 0 6px}
+.bp-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.bp-head{grid-column:1/-1}
+.bp{display:block;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;
+  padding:10px 11px;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;
+  font-family:inherit;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bp:active{background:var(--brand-soft)}
+.bp.fill{border-color:var(--ok);background:var(--ok-soft)}
+.bp small{display:block;font-size:10.5px;font-weight:700;color:var(--ok);margin-top:2px}
 .btn-wide{grid-column:1 / -1}
 
 /* ---------- History ---------- */
@@ -190,7 +204,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
       <h1>Quét QR CCCD &amp; VietQR</h1>
       <div class="engine-tag" id="engine-tag">Đang khởi động…</div>
     </div>
-    <span class="ver">v2.1</span>
+    <span class="ver">v2.4</span>
   </div>
 </div>
 
@@ -206,9 +220,9 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
   </div>
 
   <div class="panel">
-    <label class="lbl" for="roi-slider">Vùng quét <span id="roi-val" style="float:right;font-family:var(--mono);color:var(--brand)">60%</span></label>
-    <input type="range" id="roi-slider" min="25" max="100" step="5" value="60">
-    <div class="hint">Kéo nhỏ lại khi mã QR bé — vùng càng hẹp thì mã càng nét với bộ giải mã.</div>
+    <label class="lbl" for="roi-slider">Vùng quét <span id="roi-val" style="float:right;font-family:var(--mono);color:var(--brand)">55%</span></label>
+    <input type="range" id="roi-slider" min="25" max="100" step="5" value="55">
+    <div class="hint">Kéo nhỏ lại khi mã QR bé. Bật <b>Quét hàng loạt</b> nếu muốn máy tự đọc thẻ tiếp mà không cần bấm.</div>
 
     <div id="zoom-box" style="display:none;margin-top:14px">
       <label class="lbl" for="zoom-slider">Phóng ống kính <span id="zoom-val" style="float:right;font-family:var(--mono);color:var(--brand)">1.0×</span></label>
@@ -218,7 +232,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
     <div class="chipbar">
       <button class="chip" id="chip-torch" hidden>Bật đèn</button>
       <button class="chip" id="chip-focus" hidden>Lấy nét lại</button>
-      <button class="chip on" id="chip-cont">Quét liên tục</button>
+      <button class="chip" id="chip-cont">Quét hàng loạt</button>
       <button class="chip on" id="chip-sound">Âm báo</button>
     </div>
   </div>
@@ -231,10 +245,11 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
 
       <label class="lbl" for="quality-select" style="margin-top:12px">Độ phân giải</label>
       <select id="quality-select">
-        <option value="1280">Nhanh — 1280px</option>
-        <option value="1920" selected>Cân bằng — 1920px</option>
-        <option value="2560">Nét — 2560px</option>
+        <option value="1920">1920px — nhẹ máy</option>
+        <option value="2560" selected>2560px — khuyến nghị cho CCCD</option>
+        <option value="3840">3840px — mã rất nhỏ</option>
       </select>
+      <div class="hint">Dưới 1920px thì mã QR trên CCCD tụt xuống dưới ngưỡng đọc được.</div>
 
       <div id="focus-box" style="display:none;margin-top:14px">
         <label class="lbl" for="focus-slider">Nét gần (macro) <span id="focus-val" style="float:right;font-family:var(--mono);color:var(--brand)">auto</span></label>
@@ -244,7 +259,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
   </details>
 
   <div class="tip">
-    <b>Mã QR trên CCCD:</b> đặt thẻ lọt vào khung sáng giữa màn hình, cách ống kính 12–18&nbsp;cm cho máy bắt nét, rồi kéo <b>Vùng quét</b> hẹp lại quanh mã.
+    <b>Mã QR trên CCCD rất nhỏ</b> — mỗi ô của mã chỉ vài điểm ảnh. Giữ thẻ cách ống kính 12–18&nbsp;cm cho máy bắt nét, rồi kéo <b>Phóng ống kính</b> đến khi mã <b>lấp gần đầy ô vuông sáng</b>. Đó là yếu tố quyết định đọc được hay không.
   </div>
 
   <div class="result" id="result">
@@ -260,7 +275,16 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
           <pre id="r-raw"></pre>
         </details>
       </div>
+      <div id="bankpick" hidden>
+        <div class="bp-note">
+          Bấm vào app ngân hàng <b>bạn đang dùng để chuyển tiền</b>. Đường dẫn đi qua
+          dịch vụ chuyển hướng của vietqr.io nên cần có mạng, và số tài khoản người nhận
+          sẽ được gửi qua dịch vụ đó.
+        </div>
+        <div class="bp-grid" id="bp-grid"></div>
+      </div>
       <div class="actions">
+        <button class="btn btn-action btn-wide" id="btn-action" hidden></button>
         <button class="btn btn-ghost" id="btn-copy-all">Chép toàn bộ</button>
         <button class="btn btn-ghost" id="btn-copy-tsv">Chép cho Excel</button>
         <button class="btn btn-primary btn-wide" id="btn-rescan">Quét mã tiếp theo</button>
@@ -318,43 +342,44 @@ const pad2 = n => String(n).padStart(2,"0");
 function nowStr(){ const d=new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes())+":"+pad2(d.getSeconds()); }
 
 /* ==================================================================
-   1. ENGINE QUÉT — 3 TẦNG
-   Tầng 1: BarcodeDetector gốc của hệ điều hành (nhanh nhất, chạy trên GPU/native)
-   Tầng 2: jsQR trên vùng crop giữa khung, đã thu nhỏ về <=640px
-   Tầng 3: jsQR đảo màu (mã in nền tối)
-   Điểm mấu chốt: KHÔNG BAO GIỜ getImageData() trên khung 4K nữa.
+   1. ENGINE QUÉT — 2 LÀN CHẠY SONG SONG
+   Làn A: BarcodeDetector gốc, gọi không chặn (fire-and-forget).
+          Trên nhiều máy Android nó đi qua Google Play Services và mất
+          hàng trăm ms tới vài giây mỗi khung. Await nó giữa vòng lặp là
+          treo luôn cả jsQR — đó chính là lỗi 0 fps.
+   Làn B: jsQR chạy đồng bộ, nhịp đều, luôn giữ vòng lặp sống.
+   Vùng đọc luôn VUÔNG vì mã QR vuông; crop chữ nhật làm mã bị thu nhỏ oan.
    ================================================================== */
 
 const WORK = document.createElement("canvas");
 const WCTX = WORK.getContext("2d", { willReadFrequently:true });
+const NCAN = document.createElement("canvas");   // khung riêng cho bộ giải mã gốc
+const NCTX = NCAN.getContext("2d");
 
-/* roi = tỉ lệ vùng quét giữa khung, người dùng kéo được.
-   mul = nhân thêm cho từng lượt; full = quét toàn khung để không bỏ sót mã ngoài vùng. */
-let roi = 0.60;
+let roi = 0.55;                                  // cạnh ô quét / cạnh ngắn vùng đang hiện
 const PASSES = [
   { mul:1.00, target:640 },
-  { mul:0.62, target:560 },
+  { mul:0.66, target:560 },
   { mul:1.00, target:640 },
-  { full:true, target:640 },
+  { full:true, target:660 },
   { mul:1.00, target:640 },
   { full:true, target:600, invert:true }
 ];
-const cropOf = p => p.full ? 1 : Math.max(0.15, Math.min(1, roi * p.mul));
 let passIdx = 0;
 
-let detector = null;          // BarcodeDetector
-let detectorMiss = 0;
+let detector = null;
+let nativeBusy = false, nativeSlow = 0, nativeErr = 0, nativeMs = 0;
 let hasJsQR = (typeof jsQR === "function");
 
 let currentStream = null;
 let track = null;
 let scanActive = false;
-let busy = false;
 let lastRaw = "";
-let lastHitAt = 0;
+let armed = true, noCode = 0;   /* armed=false: chờ mã rời khung rồi mới nhận lại chính nó */
 
-/* đo hiệu năng */
 let frames = 0, fpsT0 = performance.now(), lastMs = 0;
+
+function markEngine(t){ $("engine-tag").textContent = "Bộ giải mã: " + t; }
 
 async function initDetector(){
   let name = hasJsQR ? "jsQR" : "—";
@@ -367,25 +392,10 @@ async function initDetector(){
       }
     }catch(e){ detector = null; }
   }
-  $("engine-tag").textContent = detector
-    ? ("Bộ giải mã: " + name)
-    : (hasJsQR ? "Bộ giải mã: jsQR — Chrome sẽ nhanh hơn nhiều" : "Bộ giải mã: —");
+  markEngine(detector ? name : (hasJsQR ? "jsQR — Chrome sẽ nhanh hơn nhiều" : "—"));
   if (!detector && !hasJsQR){
     scanIndicator.textContent = "Thiếu jsQR.min.js — đặt file cạnh index.html";
   }
-}
-
-const stage = document.querySelector(".stage");
-/* Ép khung camera đúng tỉ lệ luồng hình để không thừa viền đen,
-   nhưng chặn trần chiều cao để phần kết quả không bị đẩy khỏi màn hình. */
-function fitStage(){
-  const vw = video.videoWidth, vh = video.videoHeight;
-  if (!vw || !vh) return;
-  const w = stage.getBoundingClientRect().width;
-  if (!w) return;
-  const maxH = Math.min(window.innerHeight * 0.62, 560);
-  stage.style.height = Math.round(Math.min(maxH, w * vh / vw)) + "px";
-  sizeOverlay();
 }
 
 function sizeOverlay(){
@@ -395,30 +405,39 @@ function sizeOverlay(){
   const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
   if (overlay.width !== w || overlay.height !== h){ overlay.width = w; overlay.height = h; }
 }
-window.addEventListener("resize", fitStage);
-window.addEventListener("orientationchange", () => setTimeout(fitStage, 250));
-/* video chưa có kích thước thật lúc loadedmetadata trên vài trình duyệt —
-   theo dõi cả ô chứa lẫn kích thước nội tại thì khung ngắm mới đặt đúng chỗ */
-video.addEventListener("resize", fitStage);
+window.addEventListener("resize", sizeOverlay);
+window.addEventListener("orientationchange", () => setTimeout(sizeOverlay, 250));
+/* video chưa có kích thước thật lúc loadedmetadata trên vài trình duyệt */
+video.addEventListener("resize", sizeOverlay);
 if (window.ResizeObserver) new ResizeObserver(sizeOverlay).observe(video);
 
-/* Video dùng object-fit:contain nên có viền đen — quy đổi toạ độ khung hình sang canvas */
-function fit(){
+/* Video dùng object-fit:cover — không viền đen, nhưng có phần khung hình bị cắt.
+   view() cho biết phần nào đang thật sự hiện trên màn hình, tính theo toạ độ video.
+   Chỉ quét trong phần đó: thấy gì quét nấy, không đọc trộm vùng ngoài màn hình. */
+function view(){
   const cw = overlay.width, ch = overlay.height;
   const vw = video.videoWidth, vh = video.videoHeight;
   if (!cw || !ch || !vw || !vh) return null;
-  const s = Math.min(cw/vw, ch/vh);
-  return { s, ox:(cw - vw*s)/2, oy:(ch - vh*s)/2, vw, vh };
+  const s = Math.max(cw/vw, ch/vh);
+  const visW = Math.min(vw, cw/s), visH = Math.min(vh, ch/s);
+  return { s, ox:(cw - vw*s)/2, oy:(ch - vh*s)/2, vw, vh,
+           vx:(vw - visW)/2, vy:(vh - visH)/2, visW, visH };
 }
 
-/* Vẽ vùng quét thật (đúng vùng jsQR đang đọc) + viền mã tìm được */
+/* Ô quét hình vuông, theo toạ độ video */
+function roiRect(mul){
+  const f = view(); if (!f) return null;
+  const k = Math.max(0.15, Math.min(1, roi * (mul || 1)));
+  const side = Math.min(f.visW, f.visH) * k;
+  return { x: f.vx + (f.visW - side)/2, y: f.vy + (f.visH - side)/2, w: side, h: side, f };
+}
+
 function paint(corners){
-  const f = fit(); if (!f) return;
-  const W = overlay.width, H = overlay.height;
+  const r = roiRect(1); if (!r) return;
+  const f = r.f, W = overlay.width, H = overlay.height;
   octx.clearRect(0,0,W,H);
 
-  const bw = f.vw*roi*f.s, bh = f.vh*roi*f.s;
-  const bx = f.ox + (f.vw*f.s - bw)/2, by = f.oy + (f.vh*f.s - bh)/2;
+  const bx = r.x*f.s + f.ox, by = r.y*f.s + f.oy, bw = r.w*f.s, bh = r.h*f.s;
 
   octx.fillStyle = "rgba(0,0,0,.42)";
   octx.fillRect(0,0,W,by);
@@ -426,9 +445,9 @@ function paint(corners){
   octx.fillRect(0,by,bx,bh);
   octx.fillRect(bx+bw,by,W-(bx+bw),bh);
 
-  const c = Math.min(bw,bh)*0.18;
+  const c = bw*0.20;
   octx.strokeStyle = "rgba(255,255,255,.92)";
-  octx.lineWidth = Math.max(3, W/160);
+  octx.lineWidth = Math.max(3, W/150);
   octx.lineCap = "round";
   const corner = (cx,cy,dx,dy)=>{
     octx.beginPath();
@@ -452,21 +471,37 @@ function paint(corners){
   }
 }
 
-/* Một lượt jsQR trên vùng crop đã thu nhỏ */
-function jsPass(p){
-  const vw = video.videoWidth, vh = video.videoHeight;
-  if (!vw || !vh) return null;
-  const crop = cropOf(p);
-  const sw = Math.round(vw*crop), sh = Math.round(vh*crop);
-  const sx = ((vw-sw)/2)|0, sy = ((vh-sh)/2)|0;
-  const k  = Math.min(1, p.target / Math.max(sw,sh));
-  const dw = Math.max(1, Math.round(sw*k)), dh = Math.max(1, Math.round(sh*k));
+/* jsQR ném TypeError trong locate() với một số khung hình nhiễu.
+   Không bọc lại thì đúng một khung xấu là vòng quét chết hẳn, không báo gì. */
+let jsqrErr = 0;
+function safeJsQR(data, w, h, inv){
+  try{
+    return jsQR(data, w, h, { inversionAttempts: inv });
+  }catch(e){
+    if (++jsqrErr % 50 === 1) console.warn("jsQR lỗi khung hình:", e.message);
+    return null;
+  }
+}
 
+/* Một lượt jsQR. p.full = cả vùng đang hiện, còn lại = ô vuông giữa khung. */
+function jsPass(p){
+  const f = view(); if (!f) return null;
+  let sx, sy, sw, sh;
+  if (p.full){ sx=f.vx; sy=f.vy; sw=f.visW; sh=f.visH; }
+  else {
+    const r = roiRect(p.mul); if (!r) return null;
+    sx=r.x; sy=r.y; sw=r.w; sh=r.h;
+  }
+  sx=Math.round(sx); sy=Math.round(sy); sw=Math.round(sw); sh=Math.round(sh);
+  if (sw < 8 || sh < 8) return null;
+
+  const k = Math.min(1, p.target / Math.max(sw,sh));
+  const dw = Math.max(1, Math.round(sw*k)), dh = Math.max(1, Math.round(sh*k));
   if (WORK.width !== dw || WORK.height !== dh){ WORK.width = dw; WORK.height = dh; }
   WCTX.drawImage(video, sx,sy,sw,sh, 0,0,dw,dh);
   const img = WCTX.getImageData(0,0,dw,dh);
 
-  const code = jsQR(img.data, dw, dh, { inversionAttempts: p.invert ? "onlyInvert" : "dontInvert" });
+  const code = safeJsQR(img.data, dw, dh, p.invert ? "onlyInvert" : "dontInvert");
   if (!code) return null;
 
   const back = pt => ({ x: sx + pt.x/k, y: sy + pt.y/k });
@@ -477,58 +512,91 @@ function jsPass(p){
   };
 }
 
-async function tick(){
-  if (!scanActive || busy || video.readyState < 2){ schedule(); return; }
-  busy = true;
+/* Gọi bộ giải mã gốc rồi đi tiếp ngay, không chờ. Chỉ cho 1 lệnh chạy cùng lúc.
+   Đưa ô vuông đã thu nhỏ thay vì cả khung 1080×1920 — nhanh hơn nhiều. */
+function nativeTry(){
+  if (!detector || nativeBusy) return;
+  const r = roiRect(1); if (!r) return;
+  const k = Math.min(1, 720 / Math.max(r.w, r.h));
+  const dw = Math.max(1, Math.round(r.w*k)), dh = Math.max(1, Math.round(r.h*k));
+  if (dw < 8 || dh < 8) return;
+  if (NCAN.width !== dw || NCAN.height !== dh){ NCAN.width = dw; NCAN.height = dh; }
+  NCTX.drawImage(video, Math.round(r.x),Math.round(r.y),Math.round(r.w),Math.round(r.h), 0,0,dw,dh);
+
+  nativeBusy = true;
   const t0 = performance.now();
-  let hit = null;
+  const rx = r.x, ry = r.y;
 
-  try{
-    /* Tầng 1 — native. Nhận thẳng phần tử <video>, không tốn getImageData. */
-    if (detector){
-      try{
-        const codes = await detector.detect(video);
-        if (codes && codes.length){
-          const c = codes[0];
-          hit = { data:c.rawValue, corners:(c.cornerPoints||[]).map(p=>({x:p.x,y:p.y})) };
-          detectorMiss = 0;
-        } else { detectorMiss++; }
-      }catch(e){ if (++detectorMiss > 8) detector = null; }
+  detector.detect(NCAN).then(codes => {
+    nativeBusy = false;
+    nativeMs = performance.now() - t0;
+    nativeSlow = nativeMs > 350 ? nativeSlow+1 : 0;
+    if (nativeSlow >= 4 && hasJsQR){
+      detector = null;
+      markEngine("jsQR (đã tắt bộ giải mã gốc vì máy chạy chậm)");
+      return;
     }
+    if (!codes || !codes.length || !scanActive) return;
+    const c = codes[0];
+    handleHit({
+      data: c.rawValue,
+      corners: (c.cornerPoints || []).map(pt => ({ x: rx + pt.x/k, y: ry + pt.y/k }))
+    });
+  }).catch(() => {
+    nativeBusy = false;
+    if (++nativeErr > 5 && hasJsQR){ detector = null; markEngine("jsQR"); }
+  });
+}
 
-    /* Tầng 2/3 — jsQR, tối đa 2 lượt/khung để giữ >20fps */
-    if (!hit && hasJsQR){
-      let n = 0;
-      while (!hit && n < 2 && performance.now()-t0 < 34){
-        hit = jsPass(PASSES[passIdx++ % PASSES.length]);
-        n++;
-      }
+function handleHit(hit){
+  if (!hit || !hit.data || !scanActive) return;
+  noCode = 0;
+  paint(hit.corners && hit.corners.length === 4 ? hit.corners : null);
+  /* Mã khác thì đọc ngay. Đúng mã vừa đọc thì chờ nó rời khỏi khung đã —
+     giơ lên lại là đọc lại, nhưng để yên trước ống kính thì không đọc lặp. */
+  if (!armed && hit.data === lastRaw) return;
+  armed = false;
+  lastRaw = hit.data;
+  onFound(hit.data);
+}
+
+/* Vòng lặp đồng bộ hoàn toàn — không await bất cứ thứ gì */
+function tick(){
+  if (!scanActive || video.readyState < 2){ schedule(); return; }
+  const t0 = performance.now();
+
+  nativeTry();                       // làn A, chạy nền
+
+  let hit = null;                    // làn B
+  if (hasJsQR){
+    let n = 0;
+    while (!hit && n < 2 && performance.now() - t0 < 34){
+      try{ hit = jsPass(PASSES[passIdx++ % PASSES.length]); }
+      catch(e){ hit = null; }
+      n++;
     }
-  } finally { busy = false; }
+  }
 
-  lastMs = performance.now()-t0;
+  lastMs = performance.now() - t0;
   frames++;
-  if (performance.now()-fpsT0 > 800){
-    perfEl.textContent = Math.round(frames*1000/(performance.now()-fpsT0)) + " fps · " + lastMs.toFixed(0) + " ms";
+  const el = performance.now() - fpsT0;
+  if (el > 700){
+    perfEl.textContent = Math.round(frames*1000/el) + " fps · " + lastMs.toFixed(0) + " ms"
+      + (detector && nativeMs ? " · gốc " + nativeMs.toFixed(0) + "ms" : "");
     frames = 0; fpsT0 = performance.now();
   }
 
-  if (hit && hit.data){
-    paint(hit.corners && hit.corners.length===4 ? hit.corners : null);
-    const t = Date.now();
-    if (hit.data !== lastRaw || t - lastHitAt > 2500){
-      lastRaw = hit.data; lastHitAt = t;
-      onFound(hit.data);
-    }
-  } else {
+  if (hit){ handleHit(hit); }
+  else {
     paint(null);
+    if (++noCode >= 4) armed = true;   // mã đã rời khung
   }
   schedule();
 }
 
 /* Chỉ cho phép đúng 1 vòng lặp sống tại một thời điểm.
    Firefox Android có requestVideoFrameCallback nhưng nhiều lúc không bắn callback,
-   làm vòng lặp đứng hẳn (0 fps). Watchdog 400ms phát hiện rồi rơi về rAF vĩnh viễn. */
+   làm vòng lặp đứng hẳn. Watchdog 400ms phát hiện rồi rơi về rAF vĩnh viễn. */
 let pending = false, watchdog = null;
 let useRVFC = typeof video.requestVideoFrameCallback === "function";
 function schedule(){
@@ -542,17 +610,12 @@ function schedule(){
   };
   if (useRVFC){
     video.requestVideoFrameCallback(run);
-    watchdog = setTimeout(() => {
-      if (pending){
-        useRVFC = false;
-        perfEl.textContent = "";
-        run();
-      }
-    }, 400);
+    watchdog = setTimeout(() => { if (pending){ useRVFC = false; run(); } }, 400);
   } else {
     requestAnimationFrame(run);
   }
 }
+
 
 /* ==================================================================
    2. CAMERA
@@ -594,20 +657,33 @@ function startCamera(deviceId = null){
 }
 
 function onMeta(){
-  fitStage();
   sizeOverlay();
   scanActive = true;
   schedule();
 }
 
+let zoomTouched = false;
 function setupZoom(caps){
   const box = $("zoom-box"), sl = $("zoom-slider"), val = $("zoom-val");
   if (caps && caps.zoom){
     box.style.display = "block";
     sl.min = caps.zoom.min; sl.max = caps.zoom.max; sl.step = caps.zoom.step || 0.1;
-    sl.value = track.getSettings().zoom || caps.zoom.min;
-    val.textContent = (+sl.value).toFixed(1) + "×";
+
+    /* Mã QR CCCD chỉ khoảng 2 điểm ảnh mỗi ô ở khoảng cách cầm tay — ngay ngưỡng chết.
+       Zoom 2× là cách rẻ nhất để gấp đôi số điểm ảnh trên mã, nên bật sẵn. */
+    let start = track.getSettings().zoom || caps.zoom.min;
+    if (!zoomTouched){
+      const want = Math.min(2, caps.zoom.max);
+      if (want > start){
+        start = want;
+        track.applyConstraints({ advanced:[{ zoom: want }] }).catch(()=>{});
+      }
+    }
+    sl.value = start;
+    val.textContent = (+start).toFixed(1) + "×";
+
     sl.oninput = e => {
+      zoomTouched = true;
       val.textContent = (+e.target.value).toFixed(1) + "×";
       track.applyConstraints({ advanced:[{ zoom: parseFloat(e.target.value) }] }).catch(()=>{});
     };
@@ -692,62 +768,109 @@ $("quality-select").addEventListener("change", () => startCamera(cameraSelect.va
 
 /* --- 3.1 Danh sách BIN ngân hàng (Napas). Sửa/bổ sung tự do ở đây. --- */
 const BANKS = {
-  "970405":["Agribank","NH Nông nghiệp và Phát triển Nông thôn Việt Nam"],
-  "970415":["VietinBank","NH TMCP Công Thương Việt Nam"],
-  "970436":["Vietcombank","NH TMCP Ngoại Thương Việt Nam"],
-  "970418":["BIDV","NH Đầu tư và Phát triển Việt Nam"],
-  "970422":["MB Bank","NH TMCP Quân Đội"],
-  "970407":["Techcombank","NH TMCP Kỹ Thương Việt Nam"],
-  "970416":["ACB","NH TMCP Á Châu"],
-  "970432":["VPBank","NH TMCP Việt Nam Thịnh Vượng"],
-  "970423":["TPBank","NH TMCP Tiên Phong"],
-  "970403":["Sacombank","NH TMCP Sài Gòn Thương Tín"],
-  "970443":["SHB","NH TMCP Sài Gòn - Hà Nội"],
-  "970426":["MSB","NH TMCP Hàng Hải"],
-  "970431":["Eximbank","NH TMCP Xuất Nhập Khẩu Việt Nam"],
-  "970441":["VIB","NH TMCP Quốc tế Việt Nam"],
-  "970437":["HDBank","NH TMCP Phát triển TP.HCM"],
-  "970454":["BVBank","NH TMCP Bản Việt"],
-  "970429":["SCB","NH TMCP Sài Gòn"],
-  "970448":["OCB","NH TMCP Phương Đông"],
-  "970433":["VietBank","NH TMCP Việt Nam Thương Tín"],
-  "970419":["NCB","NH TMCP Quốc Dân"],
-  "970428":["Nam A Bank","NH TMCP Nam Á"],
-  "970427":["VietABank","NH TMCP Việt Á"],
-  "970438":["BaoViet Bank","NH TMCP Bảo Việt"],
-  "970440":["SeABank","NH TMCP Đông Nam Á"],
-  "970449":["LPBank","NH TMCP Lộc Phát Việt Nam"],
-  "970430":["PGBank","NH TMCP Thịnh vượng và Phát triển"],
-  "970425":["ABBANK","NH TMCP An Bình"],
-  "970412":["PVcomBank","NH TMCP Đại Chúng Việt Nam"],
-  "970414":["Oceanbank","NH TNHH MTV Đại Dương"],
-  "970409":["BacABank","NH TMCP Bắc Á"],
-  "970408":["GPBank","NH TM TNHH MTV Dầu Khí Toàn Cầu"],
-  "970406":["DongA Bank","NH TMCP Đông Á"],
-  "970444":["CBBank","NH TM TNHH MTV Xây dựng Việt Nam"],
-  "970400":["SaigonBank","NH TMCP Sài Gòn Công Thương"],
-  "970446":["Co-opBank","NH Hợp tác xã Việt Nam"],
-  "970452":["KienLongBank","NH TMCP Kiên Long"],
-  "970421":["VRB","NH Liên doanh Việt - Nga"],
-  "970434":["Indovina Bank","NH TNHH Indovina"],
-  "970439":["Public Bank","Public Bank Việt Nam"],
-  "970442":["Hong Leong","Hong Leong Bank Việt Nam"],
-  "970410":["Standard Chartered","Standard Chartered Việt Nam"],
-  "970424":["Shinhan Bank","NH TNHH MTV Shinhan Việt Nam"],
-  "970457":["Woori Bank","NH Woori Việt Nam"],
-  "970458":["UOB","United Overseas Bank Việt Nam"],
-  "970455":["IBK Hà Nội","Industrial Bank of Korea - CN Hà Nội"],
-  "970456":["IBK TP.HCM","Industrial Bank of Korea - CN TP.HCM"],
-  "970462":["Kookmin HN","Kookmin Bank - CN Hà Nội"],
-  "970463":["Kookmin HCM","Kookmin Bank - CN TP.HCM"],
-  "970466":["KEB Hana HCM","KEB Hana Bank - CN TP.HCM"],
-  "970467":["KEB Hana HN","KEB Hana Bank - CN Hà Nội"],
-  "546034":["CAKE","CAKE by VPBank"],
-  "546035":["Ubank","Ubank by VPBank"],
-  "963388":["Timo","Timo by BVBank"],
-  "971005":["Viettel Money","Tổng Công ty Dịch vụ số Viettel"],
-  "971011":["VNPT Money","VNPT Money"]
+  "970415":["VietinBank","Ngân hàng TMCP Công thương Việt Nam","ICB"],
+  "970436":["Vietcombank","Ngân hàng TMCP Ngoại Thương Việt Nam","VCB"],
+  "970418":["BIDV","Ngân hàng TMCP Đầu tư và Phát triển Việt Nam","BIDV"],
+  "970405":["Agribank","Ngân hàng Nông nghiệp và Phát triển Nông thôn Việt Nam","VBA"],
+  "970448":["OCB","Ngân hàng TMCP Phương Đông","OCB"],
+  "970422":["MBBank","Ngân hàng TMCP Quân đội","MB"],
+  "970407":["Techcombank","Ngân hàng TMCP Kỹ thương Việt Nam","TCB"],
+  "970416":["ACB","Ngân hàng TMCP Á Châu","ACB"],
+  "970432":["VPBank","Ngân hàng TMCP Việt Nam Thịnh Vượng","VPB"],
+  "970423":["TPBank","Ngân hàng TMCP Tiên Phong","TPB"],
+  "970403":["Sacombank","Ngân hàng TMCP Sài Gòn Thương Tín","STB"],
+  "970437":["HDBank","Ngân hàng TMCP Phát triển Thành phố Hồ Chí Minh","HDB"],
+  "970454":["BVBank (Bản Việt)","Ngân hàng TMCP Bản Việt","VCCB"],
+  "970429":["SCB","Ngân hàng TMCP Sài Gòn","SCB"],
+  "970441":["VIB","Ngân hàng TMCP Quốc tế Việt Nam","VIB"],
+  "970443":["SHB","Ngân hàng TMCP Sài Gòn - Hà Nội","SHB"],
+  "970431":["Eximbank","Ngân hàng TMCP Xuất Nhập khẩu Việt Nam","EIB"],
+  "970426":["MSB","Ngân hàng TMCP Hàng Hải Việt Nam","MSB"],
+  "546034":["CAKE","Ngân hàng số CAKE by VPBank","CAKE"],
+  "546035":["Ubank","Ngân hàng số Ubank by VPBank","Ubank"],
+  "971005":["ViettelMoney","Tổng Công ty Dịch vụ số Viettel","VTLMONEY"],
+  "963388":["Timo","Ngân hàng số Timo by Ban Viet Bank","TIMO"],
+  "971011":["VNPTMoney","VNPT Money","VNPTMONEY"],
+  "970400":["SaigonBank","Ngân hàng TMCP Sài Gòn Công Thương","SGICB"],
+  "970409":["BacABank","Ngân hàng TMCP Bắc Á","BAB"],
+  "971025":["MoMo","CTCP Dịch Vụ Di Động Trực Tuyến","momo"],
+  "971133":["PVcomBank Pay","Ngân hàng TMCP Đại Chúng Việt Nam - Ngân hàng số","PVDB"],
+  "970412":["PVcomBank","Ngân hàng TMCP Đại Chúng Việt Nam","PVCB"],
+  "970414":["MBV","Ngân hàng TNHH MTV Việt Nam Hiện Đại (trước là OceanBank)","MBV"],
+  "970419":["NCB","Ngân hàng TMCP Quốc Dân","NCB"],
+  "970424":["ShinhanBank","Ngân hàng TNHH MTV Shinhan Việt Nam","SHBVN"],
+  "970425":["ABBANK","Ngân hàng TMCP An Bình","ABB"],
+  "970427":["VietABank","Ngân hàng TMCP Việt Á","VAB"],
+  "970428":["NamABank","Ngân hàng TMCP Nam Á","NAB"],
+  "970430":["PGBank","Ngân hàng TMCP Thịnh vượng và Phát triển","PGB"],
+  "970433":["VietBank","Ngân hàng TMCP Việt Nam Thương Tín","VIETBANK"],
+  "970438":["BaoVietBank","Ngân hàng TMCP Bảo Việt","BVB"],
+  "970440":["SeABank","Ngân hàng TMCP Đông Nam Á","SEAB"],
+  "970446":["COOPBANK","Ngân hàng Hợp tác xã Việt Nam","COOPBANK"],
+  "970449":["LPBank","Ngân hàng TMCP Lộc Phát Việt Nam","LPB"],
+  "970452":["KienLongBank","Ngân hàng TMCP Kiên Long","KLB"],
+  "668888":["KBank","Ngân hàng Đại chúng TNHH Kasikornbank","KBank"],
+  "977777":["MAFC","Công ty Tài chính TNHH MTV Mirae Asset Việt Nam","MAFC"],
+  "970442":["HongLeong","Ngân hàng TNHH MTV Hong Leong Việt Nam","HLBVN"],
+  "970467":["KEBHanaHN","Ngân hàng KEB Hana - Chi nhánh Hà Nội","KEBHANAHN"],
+  "970466":["KEBHanaHCM","Ngân hàng KEB Hana - Chi nhánh TP. Hồ Chí Minh","KEBHANAHCM"],
+  "533948":["Citibank","Ngân hàng Citibank N.A. - Chi nhánh Hà Nội","CITIBANK"],
+  "970444":["CBBank","Ngân hàng Thương mại TNHH MTV Xây dựng Việt Nam","CBB"],
+  "422589":["CIMB","Ngân hàng TNHH MTV CIMB Việt Nam","CIMB"],
+  "796500":["DBSBank","DBS Bank Ltd - Chi nhánh TP. Hồ Chí Minh","DBS"],
+  "970406":["Vikki","Ngân hàng TNHH MTV Số Vikki (trước là DongA Bank)","Vikki"],
+  "999888":["VBSP","Ngân hàng Chính sách Xã hội","VBSP"],
+  "970408":["GPBank","Ngân hàng Thương mại TNHH MTV Dầu Khí Toàn Cầu","GPB"],
+  "970463":["KookminHCM","Ngân hàng Kookmin - Chi nhánh TP. Hồ Chí Minh","KBHCM"],
+  "970462":["KookminHN","Ngân hàng Kookmin - Chi nhánh Hà Nội","KBHN"],
+  "970457":["Woori","Ngân hàng TNHH MTV Woori Việt Nam","WVN"],
+  "970421":["VRB","Ngân hàng Liên doanh Việt - Nga","VRB"],
+  "458761":["HSBC","Ngân hàng TNHH MTV HSBC Việt Nam","HSBC"],
+  "970455":["IBKHN","Ngân hàng Công nghiệp Hàn Quốc - CN Hà Nội","IBK-HN"],
+  "970456":["IBKHCM","Ngân hàng Công nghiệp Hàn Quốc - CN TP. Hồ Chí Minh","IBK-HCM"],
+  "970434":["IndovinaBank","Ngân hàng TNHH Indovina","IVB"],
+  "970458":["UnitedOverseas","Ngân hàng United Overseas - CN TP. Hồ Chí Minh","UOB"],
+  "801011":["Nonghyup","Ngân hàng Nonghyup - Chi nhánh Hà Nội","NHB-HN"],
+  "970410":["StandardChartered","Ngân hàng TNHH MTV Standard Chartered Việt Nam","SCVN"],
+  "970439":["PublicBank","Ngân hàng TNHH MTV Public Việt Nam","PBVN"],
 };
+const BANK_APPS = [
+  ["mb","MB Bank",1],
+  ["icb","VietinBank iPay",1],
+  ["bidv","BIDV SmartBanking",1],
+  ["acb","ACB One",1],
+  ["ocb","OCB OMNI",1],
+  ["vcb","Vietcombank",0],
+  ["vba","Agribank E-Mobile Banking",0],
+  ["tcb","Techcombank Mobile",0],
+  ["vpb","VPBank NEO",0],
+  ["cake","CAKE by VPBank",0],
+  ["tpb","TPBank Mobile",0],
+  ["lpb","Liên Việt 24h",0],
+  ["timo","Timo Digital Bank",0],
+  ["hdb","HDBank",0],
+  ["vib-2","MyVIB 2.0",0],
+  ["vib","MyVIB",0],
+  ["shb","SHB Mobile Banking",0],
+  ["seab","SeAMobile",0],
+  ["shbvn","Shinhan Bank SOL",0],
+  ["scb","SCB Mobile Banking",0],
+  ["nab","Nam A Bank",0],
+  ["abb","AB Ditizen",0],
+  ["eib","Eximbank Mobile",0],
+  ["coopbank","Co-opBank Mobile",0],
+  ["pvcb","PV Mobile Banking",0],
+  ["klb","KienlongBank Plus",0],
+  ["ncb","NCB iziMobile",0],
+  ["bvb","BAOVIET Smart",0],
+  ["vab","VietABank EzMobile",0],
+  ["vietbank","Vietbank Digital",0],
+  ["sgicb","SAIGONBANK Smart",0],
+  ["wvn","Woori WON",0],
+  ["oceanbank","OceanBank",0],
+  ["pbvn","PB engage VN",0],
+  ["cimb","OCTO by CIMB",0],
+];
 
 /* --- 3.2 EMVCo TLV (VietQR / VNPAY) --- */
 function tlv(s){
@@ -839,12 +962,18 @@ function parseEMV(raw){
           pill: crcOk ? "ok" : "bad", pillText: crcOk ? "OK" : "Cảnh báo"});
 
   const isAgri = bank === "970405";
+  const noiDung = root["62"] ? (tlv(root["62"])["08"] || "") : "";
   return {
     type: isVietQR ? "vietqr" : "emv",
     badge: isVietQR ? "VietQR · Chuyển khoản" : "Mã thanh toán EMV",
     badgeClass: isAgri ? "agri" : "",
     title: (root["59"] || "Mã thanh toán"),
-    fields: f
+    fields: f,
+    pay: (isVietQR && acc && bankInfo) ? {
+      acc: acc, code: bankInfo[2], bank: bankInfo[0],
+      name: root["59"] || "", amount: root["54"] || "", note: noiDung
+    } : null,
+    action: (isVietQR && acc) ? { label:"Mở app ngân hàng để chuyển", picker:true } : null
   };
 }
 
@@ -989,11 +1118,18 @@ function parseCCCD(raw){
 function parseWifi(raw){
   if (!/^WIFI:/i.test(raw)) return null;
   const g = k => { const m = raw.match(new RegExp(k+":((?:[^;\\\\]|\\\\.)*)")); return m ? m[1].replace(/\\(.)/g,"$1") : ""; };
+  const ssid = g("S"), pass = g("P"), sec = g("T");
   const f = [];
-  if (g("S")) f.push({k:"Tên mạng (SSID)", v:g("S"), big:true, copy:g("S")});
-  if (g("P")) f.push({k:"Mật khẩu", v:g("P"), num:true, big:true, copy:g("P")});
-  if (g("T")) f.push({k:"Bảo mật", v:g("T")});
-  return { type:"wifi", badge:"Wi-Fi", badgeClass:"plain", title:g("S"), fields:f };
+  if (ssid) f.push({k:"Tên mạng (SSID)", v:ssid, big:true, copy:ssid});
+  if (pass) f.push({k:"Mật khẩu", v:pass, num:true, big:true, copy:pass});
+  if (sec)  f.push({k:"Bảo mật", v:sec === "nopass" ? "Mạng mở, không mật khẩu" : sec});
+  if (g("H") === "true") f.push({k:"Mạng ẩn", v:"Có — phải nhập tay tên mạng"});
+  f.push({k:"Cách dùng",
+          v: pass ? "Chép mật khẩu rồi vào Cài đặt Wi-Fi của máy để kết nối"
+                  : "Mạng không mật khẩu — vào Cài đặt Wi-Fi chọn đúng tên mạng là vào được",
+          note:"Trang web không được phép tự kết nối Wi-Fi — đây là giới hạn bảo mật của mọi trình duyệt, không phải lỗi ứng dụng."});
+  return { type:"wifi", badge:"Wi-Fi", badgeClass:"plain", title:ssid, fields:f,
+           action: pass ? {label:"Chép mật khẩu Wi-Fi", copy:pass, name:"mật khẩu"} : null };
 }
 function parseContact(raw){
   if (/^BEGIN:VCARD/i.test(raw)){
@@ -1015,22 +1151,51 @@ function parseSimple(raw){
   let m;
   if ((m = raw.match(/^tel:(.+)$/i)))
     return { type:"tel", badge:"Số điện thoại", badgeClass:"plain", title:m[1],
-             fields:[{k:"Số điện thoại", v:m[1], num:true, big:true, copy:m[1]}] };
+             fields:[{k:"Số điện thoại", v:m[1], num:true, big:true, copy:m[1]}],
+             action:{label:"Gọi số này", open:"tel:"+m[1]} };
+  if ((m = raw.match(/^smsto:([^:]+):?([\s\S]*)$/i)))
+    return { type:"sms", badge:"Tin nhắn", badgeClass:"plain", title:m[1],
+             fields:[{k:"Gửi tới", v:m[1], num:true, copy:m[1]},
+                     {k:"Nội dung", v:m[2]||"(trống)", copy:m[2]||undefined}],
+             action:{label:"Soạn tin nhắn", open:"sms:"+m[1]} };
   if ((m = raw.match(/^mailto:([^?]+)/i)))
     return { type:"mail", badge:"Email", badgeClass:"plain", title:m[1],
-             fields:[{k:"Địa chỉ email", v:m[1], big:true, copy:m[1]}] };
+             fields:[{k:"Địa chỉ email", v:m[1], big:true, copy:m[1]}],
+             action:{label:"Soạn email", open:raw} };
   if ((m = raw.match(/^geo:([\d.\-]+),([\d.\-]+)/i)))
     return { type:"geo", badge:"Toạ độ", badgeClass:"plain", title:m[1]+", "+m[2],
              fields:[{k:"Vĩ độ", v:m[1], num:true},{k:"Kinh độ", v:m[2], num:true},
-                     {k:"Toạ độ", v:m[1]+","+m[2], copy:m[1]+","+m[2]}] };
+                     {k:"Toạ độ", v:m[1]+","+m[2], copy:m[1]+","+m[2]}],
+             action:{label:"Mở bản đồ", open:"https://www.google.com/maps?q="+m[1]+","+m[2]} };
   if (/^https?:\/\//i.test(raw)){
-    let host = raw;
-    try{ host = new URL(raw).hostname; }catch(e){}
+    let host = raw, path = "";
+    try{ const u = new URL(raw); host = u.hostname; path = u.pathname + u.search; }catch(e){}
     return { type:"url", badge:"Liên kết", badgeClass:"", title:host, link:raw,
-             fields:[{k:"Tên miền", v:host, big:true},{k:"Địa chỉ", v:raw, copy:raw, link:raw}] };
+             fields:[{k:"Trang", v:host, big:true, copy:host},
+                     (path && path !== "/" ? {k:"Đường dẫn", v:path, sub:true} : null),
+                     {k:"Địa chỉ đầy đủ", v:raw, copy:raw, link:raw}].filter(Boolean),
+             action:{label:"Mở liên kết", open:raw} };
   }
   return null;
 }
+/* Dữ liệu ngăn cách bằng | nhưng không phải CCCD — vẫn tách thành từng dòng cho dễ đọc */
+function parsePipe(raw){
+  if (raw.indexOf("|") < 0) return null;
+  const parts = raw.split("|").map(s => s.trim());
+  if (parts.filter(Boolean).length < 2) return null;
+  const f = parts.map((v,i) => {
+    const row = { k: "Phần " + (i+1), v: v || "(trống)" };
+    if (v){
+      row.copy = v;
+      if (toDate(v)){ row.v = fmtDate(v); row.note = "ngày tháng"; row.num = true; }
+      else if (/^\d{6,}$/.test(v)){ row.num = true; }
+    }
+    return row;
+  });
+  return { type:"pipe", badge:"Dữ liệu tách bằng dấu |", badgeClass:"plain",
+           title: parts.find(Boolean) || "", fields:f };
+}
+
 function parseText(raw){
   const f = [];
   const t = raw.trim();
@@ -1062,7 +1227,7 @@ function parseText(raw){
 
 function parseQR(raw){
   return parseCCCD(raw) || parseEMV(raw) || parseWifi(raw) ||
-         parseContact(raw) || parseSimple(raw) || parseText(raw);
+         parseContact(raw) || parseSimple(raw) || parsePipe(raw) || parseText(raw);
 }
 
 /* ==================================================================
@@ -1099,13 +1264,15 @@ function onFound(raw){
   if (scanLog.length > 40) scanLog.length = 40;
   renderHistory();
 
-  const cont = $("chip-cont").classList.contains("on");
-  if (cont){
-    scanActive = false;
-    scanIndicator.textContent = "Đã đọc — tự quét tiếp sau 1,2 giây";
-    setTimeout(()=>{ scanActive = true; scanIndicator.textContent = "Sẵn sàng — đưa mã vào khung"; schedule(); }, 1200);
+  scanActive = false;
+  if ($("chip-cont").classList.contains("on")){
+    scanIndicator.textContent = "Đã đọc — tự chờ thẻ tiếp theo";
+    setTimeout(() => {
+      scanActive = true;
+      scanIndicator.textContent = "Sẵn sàng — đưa thẻ tiếp theo vào khung";
+      schedule();
+    }, 900);
   } else {
-    scanActive = false;
     scanIndicator.textContent = "Đã đọc xong. Bấm “Quét mã tiếp theo”.";
   }
 }
@@ -1157,8 +1324,59 @@ function render(p){
     box.appendChild(row);
   });
 
+  const ab = $("btn-action"), bp = $("bankpick");
+  bp.hidden = true;
+  if (p.action){
+    ab.hidden = false;
+    ab.textContent = p.action.label;
+    ab.onclick = () => {
+      if (p.action.open) window.open(p.action.open, "_blank", "noopener");
+      else if (p.action.copy) copy(p.action.copy, p.action.name || "");
+      else if (p.action.picker){
+        bp.hidden = !bp.hidden;
+        if (!bp.hidden){ buildBankPicker(p.pay); bp.scrollIntoView({behavior:"smooth", block:"nearest"}); }
+      }
+    };
+  } else {
+    ab.hidden = true; ab.onclick = null;
+  }
+
   $("result").classList.add("show");
   $("result").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+/* Danh sách app ngân hàng để chuyển tiền.
+   Chỉ 5 app được ghi nhận điền sẵn thông tin; số còn lại chỉ mở app lên,
+   vẫn phải tự nhập tay. Deeplink điền sẵn xuyên ngân hàng chưa thành chuẩn ở VN. */
+function buildBankPicker(pay){
+  const g = $("bp-grid");
+  g.textContent = "";
+  if (!pay){ g.textContent = "Mã này không có số tài khoản để chuyển."; return; }
+
+  const q = new URLSearchParams();
+  q.set("ba", pay.acc + "@" + pay.code);
+  if (pay.amount) q.set("am", pay.amount);
+  if (pay.note)   q.set("tn", pay.note);
+  if (pay.name)   q.set("bn", pay.name);
+
+  const section = (text) => {
+    const h = document.createElement("div");
+    h.className = "bp-head"; h.textContent = text; g.appendChild(h);
+  };
+  const add = ([id, name, fill]) => {
+    const a = document.createElement("a");
+    a.className = "bp" + (fill ? " fill" : "");
+    a.href = "https://dl.vietqr.io/pay?app=" + id + "&" + q.toString();
+    a.target = "_blank"; a.rel = "noopener noreferrer";
+    a.appendChild(document.createTextNode(name));
+    if (fill){ const s = document.createElement("small"); s.textContent = "ĐIỀN SẴN"; a.appendChild(s); }
+    g.appendChild(a);
+  };
+
+  section("Điền sẵn số tài khoản và số tiền");
+  BANK_APPS.filter(a => a[2]).forEach(add);
+  section("Chỉ mở app, phải tự nhập");
+  BANK_APPS.filter(a => !a[2]).forEach(add);
 }
 
 function plainOf(p){
@@ -1172,10 +1390,10 @@ function tsvOf(p){
 $("btn-copy-all").onclick = () => current && copy(plainOf(current), "toàn bộ");
 $("btn-copy-tsv").onclick = () => current && copy(tsvOf(current), "dạng bảng");
 $("btn-rescan").onclick = () => {
-  lastRaw = "";
+  armed = true;               // bấm nút là lệnh rõ ràng: đọc lại ngay, kể cả mã cũ
   $("result").classList.remove("show");
   scanActive = true;
-  scanIndicator.textContent = "Sẵn sàng — đưa mã vào khung";
+  scanIndicator.textContent = "Sẵn sàng — đưa thẻ tiếp theo vào khung";
   schedule();
   window.scrollTo({ top:0, behavior:"smooth" });
 };
