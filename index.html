@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Quét QR CCCD &amp; VietQR — v2.4</title>
+<title>Quét QR CCCD &amp; VietQR — v2.5</title>
 <script src="jsQR.min.js"></script>
 <style>
 :root{
@@ -89,7 +89,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
 .chip[hidden]{display:none}
 
 /* ---------- Camera ---------- */
-.stage{position:relative;margin-top:12px;border-radius:var(--radius);overflow:hidden;background:#080b0f;box-shadow:var(--shadow);height:min(56vh,470px)}
+.stage{position:relative;margin-top:12px;border-radius:var(--radius);overflow:hidden;background:#080b0f;box-shadow:var(--shadow);height:min(44vh,380px)}
 #video{width:100%;height:100%;display:block;object-fit:cover;background:#080b0f}
 #overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .status{
@@ -98,6 +98,8 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
   color:#fff;font-size:13px;font-weight:500;display:flex;justify-content:space-between;gap:10px;
 }
 .status .perf{font-family:var(--mono);font-size:11px;opacity:.7}
+#scan-indicator{transition:.2s;border-radius:6px;padding:2px 6px;margin:-2px -6px}
+#scan-indicator.hit{background:#26d07c;color:#06331d;font-weight:700}
 
 /* ---------- Result ---------- */
 .result{margin-top:14px;display:none;scroll-margin-top:82px}
@@ -204,7 +206,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
       <h1>Quét QR CCCD &amp; VietQR</h1>
       <div class="engine-tag" id="engine-tag">Đang khởi động…</div>
     </div>
-    <span class="ver">v2.4</span>
+    <span class="ver">v2.5</span>
   </div>
 </div>
 
@@ -217,49 +219,6 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
       <span id="scan-indicator">Đang khởi động…</span>
       <span class="perf" id="perf"></span>
     </div>
-  </div>
-
-  <div class="panel">
-    <label class="lbl" for="roi-slider">Vùng quét <span id="roi-val" style="float:right;font-family:var(--mono);color:var(--brand)">55%</span></label>
-    <input type="range" id="roi-slider" min="25" max="100" step="5" value="55">
-    <div class="hint">Kéo nhỏ lại khi mã QR bé. Bật <b>Quét hàng loạt</b> nếu muốn máy tự đọc thẻ tiếp mà không cần bấm.</div>
-
-    <div id="zoom-box" style="display:none;margin-top:14px">
-      <label class="lbl" for="zoom-slider">Phóng ống kính <span id="zoom-val" style="float:right;font-family:var(--mono);color:var(--brand)">1.0×</span></label>
-      <input type="range" id="zoom-slider" min="1" max="1" step="0.1" value="1">
-    </div>
-
-    <div class="chipbar">
-      <button class="chip" id="chip-torch" hidden>Bật đèn</button>
-      <button class="chip" id="chip-focus" hidden>Lấy nét lại</button>
-      <button class="chip" id="chip-cont">Quét hàng loạt</button>
-      <button class="chip on" id="chip-sound">Âm báo</button>
-    </div>
-  </div>
-
-  <details class="panel pdet">
-    <summary>Camera và độ phân giải</summary>
-    <div style="padding-top:12px">
-      <label class="lbl" for="camera-select">Camera</label>
-      <select id="camera-select"><option value="">Đang yêu cầu quyền camera…</option></select>
-
-      <label class="lbl" for="quality-select" style="margin-top:12px">Độ phân giải</label>
-      <select id="quality-select">
-        <option value="1920">1920px — nhẹ máy</option>
-        <option value="2560" selected>2560px — khuyến nghị cho CCCD</option>
-        <option value="3840">3840px — mã rất nhỏ</option>
-      </select>
-      <div class="hint">Dưới 1920px thì mã QR trên CCCD tụt xuống dưới ngưỡng đọc được.</div>
-
-      <div id="focus-box" style="display:none;margin-top:14px">
-        <label class="lbl" for="focus-slider">Nét gần (macro) <span id="focus-val" style="float:right;font-family:var(--mono);color:var(--brand)">auto</span></label>
-        <input type="range" id="focus-slider" min="0" max="1" step="0.01" value="0">
-      </div>
-    </div>
-  </details>
-
-  <div class="tip">
-    <b>Mã QR trên CCCD rất nhỏ</b> — mỗi ô của mã chỉ vài điểm ảnh. Giữ thẻ cách ống kính 12–18&nbsp;cm cho máy bắt nét, rồi kéo <b>Phóng ống kính</b> đến khi mã <b>lấp gần đầy ô vuông sáng</b>. Đó là yếu tố quyết định đọc được hay không.
   </div>
 
   <div class="result" id="result">
@@ -287,9 +246,51 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
         <button class="btn btn-action btn-wide" id="btn-action" hidden></button>
         <button class="btn btn-ghost" id="btn-copy-all">Chép toàn bộ</button>
         <button class="btn btn-ghost" id="btn-copy-tsv">Chép cho Excel</button>
-        <button class="btn btn-primary btn-wide" id="btn-rescan">Quét mã tiếp theo</button>
       </div>
     </div>
+  </div>
+
+  <div class="panel">
+    <label class="lbl" for="roi-slider">Vùng quét <span id="roi-val" style="float:right;font-family:var(--mono);color:var(--brand)">55%</span></label>
+    <input type="range" id="roi-slider" min="25" max="100" step="5" value="55">
+    <div class="hint">Máy quét liên tục, giơ mã lên là đọc. Cùng một mã để yên trước ống kính thì chỉ đọc một lần; đưa ra rồi giơ lại là đọc lại.</div>
+
+    <div id="zoom-box" style="display:none;margin-top:14px">
+      <label class="lbl" for="zoom-slider">Phóng ống kính <span id="zoom-val" style="float:right;font-family:var(--mono);color:var(--brand)">1.0×</span></label>
+      <input type="range" id="zoom-slider" min="1" max="1" step="0.1" value="1">
+    </div>
+
+    <div class="chipbar">
+      <button class="chip" id="chip-torch" hidden>Bật đèn</button>
+      <button class="chip" id="chip-focus" hidden>Lấy nét lại</button>
+      <button class="chip" id="chip-pause">Tạm dừng</button>
+      <button class="chip on" id="chip-sound">Âm báo</button>
+    </div>
+  </div>
+
+  <details class="panel pdet">
+    <summary>Camera và độ phân giải</summary>
+    <div style="padding-top:12px">
+      <label class="lbl" for="camera-select">Camera</label>
+      <select id="camera-select"><option value="">Đang yêu cầu quyền camera…</option></select>
+
+      <label class="lbl" for="quality-select" style="margin-top:12px">Độ phân giải</label>
+      <select id="quality-select">
+        <option value="1920">1920px — nhẹ máy</option>
+        <option value="2560" selected>2560px — khuyến nghị cho CCCD</option>
+        <option value="3840">3840px — mã rất nhỏ</option>
+      </select>
+      <div class="hint">Dưới 1920px thì mã QR trên CCCD tụt xuống dưới ngưỡng đọc được.</div>
+
+      <div id="focus-box" style="display:none;margin-top:14px">
+        <label class="lbl" for="focus-slider">Nét gần (macro) <span id="focus-val" style="float:right;font-family:var(--mono);color:var(--brand)">auto</span></label>
+        <input type="range" id="focus-slider" min="0" max="1" step="0.01" value="0">
+      </div>
+    </div>
+  </details>
+
+  <div class="tip">
+    <b>Mã QR trên CCCD rất nhỏ</b> — mỗi ô của mã chỉ vài điểm ảnh. Giữ thẻ cách ống kính 12–18&nbsp;cm cho máy bắt nét, rồi kéo <b>Phóng ống kính</b> đến khi mã <b>lấp gần đầy ô vuông sáng</b>. Đó là yếu tố quyết định đọc được hay không.
   </div>
 
   <div class="hist" id="hist" style="display:none">
@@ -1264,17 +1265,20 @@ function onFound(raw){
   if (scanLog.length > 40) scanLog.length = 40;
   renderHistory();
 
-  scanActive = false;
-  if ($("chip-cont").classList.contains("on")){
-    scanIndicator.textContent = "Đã đọc — tự chờ thẻ tiếp theo";
-    setTimeout(() => {
-      scanActive = true;
-      scanIndicator.textContent = "Sẵn sàng — đưa thẻ tiếp theo vào khung";
-      schedule();
-    }, 900);
-  } else {
-    scanIndicator.textContent = "Đã đọc xong. Bấm “Quét mã tiếp theo”.";
-  }
+  /* Không dừng quét. Giơ mã lên là đọc, không phải bấm gì.
+     Cổng "mã đã rời khung" lo phần không đọc lặp khi thẻ nằm yên. */
+  flash(parsed.title || parsed.badge);
+}
+
+let flashTimer = null;
+function flash(text){
+  scanIndicator.textContent = "✓ " + String(text).slice(0, 34);
+  scanIndicator.classList.add("hit");
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => {
+    scanIndicator.classList.remove("hit");
+    scanIndicator.textContent = paused ? "Đã tạm dừng" : "Sẵn sàng — đưa mã vào khung";
+  }, 2200);
 }
 
 function render(p){
@@ -1342,7 +1346,6 @@ function render(p){
   }
 
   $("result").classList.add("show");
-  $("result").scrollIntoView({ behavior:"smooth", block:"nearest" });
 }
 
 /* Danh sách app ngân hàng để chuyển tiền.
@@ -1389,14 +1392,6 @@ function tsvOf(p){
 
 $("btn-copy-all").onclick = () => current && copy(plainOf(current), "toàn bộ");
 $("btn-copy-tsv").onclick = () => current && copy(tsvOf(current), "dạng bảng");
-$("btn-rescan").onclick = () => {
-  armed = true;               // bấm nút là lệnh rõ ràng: đọc lại ngay, kể cả mã cũ
-  $("result").classList.remove("show");
-  scanActive = true;
-  scanIndicator.textContent = "Sẵn sàng — đưa thẻ tiếp theo vào khung";
-  schedule();
-  window.scrollTo({ top:0, behavior:"smooth" });
-};
 
 function renderHistory(){
   const list = $("hist-list");
@@ -1436,7 +1431,15 @@ $("btn-export").onclick = () => {
   setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
 };
 
-$("chip-cont").onclick  = e => e.currentTarget.classList.toggle("on");
+let paused = false;
+$("chip-pause").onclick = e => {
+  paused = !paused;
+  e.currentTarget.classList.toggle("on", paused);
+  e.currentTarget.textContent = paused ? "Đang dừng" : "Tạm dừng";
+  scanActive = !paused;
+  scanIndicator.textContent = paused ? "Đã tạm dừng" : "Sẵn sàng — đưa mã vào khung";
+  if (!paused) schedule();
+};
 $("chip-sound").onclick = e => e.currentTarget.classList.toggle("on");
 $("roi-slider").oninput = e => {
   roi = parseInt(e.target.value,10)/100;
@@ -1460,7 +1463,7 @@ $("roi-slider").oninput = e => {
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden){ scanActive = false; }
-  else if (currentStream && !$("result").classList.contains("show")){
+  else if (currentStream && !paused){
     scanActive = true;
     pending = false;   // callback cũ có thể đã chết khi tab ẩn — mở khoá để lên lịch lại
     schedule();
