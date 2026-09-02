@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Quét QR CCCD &amp; VietQR — v2.5</title>
+<title>Quét QR CCCD &amp; VietQR — v2.6</title>
 <script src="jsQR.min.js"></script>
 <style>
 :root{
@@ -92,6 +92,13 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
 .stage{position:relative;margin-top:12px;border-radius:var(--radius);overflow:hidden;background:#080b0f;box-shadow:var(--shadow);height:min(44vh,380px)}
 #video{width:100%;height:100%;display:block;object-fit:cover;background:#080b0f}
 #overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.camoff{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+  justify-content:center;gap:6px;background:#0d1117;color:#8a94a1;text-align:center;padding:20px}
+.stage.off .camoff{display:flex}
+.stage.off #overlay{display:none}
+.camoff-i{font-size:34px;color:#3b4654;line-height:1}
+.camoff b{color:#c7cfda;font-size:16px}
+.camoff span{font-size:13px;max-width:240px;line-height:1.45}
 .status{
   position:absolute;left:0;right:0;bottom:0;padding:10px 12px;
   background:linear-gradient(transparent,rgba(0,0,0,.68));
@@ -206,7 +213,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
       <h1>Quét QR CCCD &amp; VietQR</h1>
       <div class="engine-tag" id="engine-tag">Đang khởi động…</div>
     </div>
-    <span class="ver">v2.5</span>
+    <span class="ver">v2.6</span>
   </div>
 </div>
 
@@ -215,6 +222,11 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
   <div class="stage">
     <video id="video" playsinline autoplay muted></video>
     <canvas id="overlay"></canvas>
+    <div class="camoff" id="camoff">
+      <div class="camoff-i">◉</div>
+      <b>Camera đang tắt</b>
+      <span>Không quét và không giữ camera — đỡ tốn pin</span>
+    </div>
     <div class="status">
       <span id="scan-indicator">Đang khởi động…</span>
       <span class="perf" id="perf"></span>
@@ -253,7 +265,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
   <div class="panel">
     <label class="lbl" for="roi-slider">Vùng quét <span id="roi-val" style="float:right;font-family:var(--mono);color:var(--brand)">55%</span></label>
     <input type="range" id="roi-slider" min="25" max="100" step="5" value="55">
-    <div class="hint">Máy quét liên tục, giơ mã lên là đọc. Cùng một mã để yên trước ống kính thì chỉ đọc một lần; đưa ra rồi giơ lại là đọc lại.</div>
+    <div class="hint">Máy quét liên tục, giơ mã lên là đọc, không phải bấm gì. Cùng một mã để yên trước ống kính thì chỉ đọc một lần; đưa ra rồi giơ lại là đọc lại. Nút <b>Tắt camera</b> nhả hẳn phần cứng cho đỡ tốn pin.</div>
 
     <div id="zoom-box" style="display:none;margin-top:14px">
       <label class="lbl" for="zoom-slider">Phóng ống kính <span id="zoom-val" style="float:right;font-family:var(--mono);color:var(--brand)">1.0×</span></label>
@@ -263,7 +275,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
     <div class="chipbar">
       <button class="chip" id="chip-torch" hidden>Bật đèn</button>
       <button class="chip" id="chip-focus" hidden>Lấy nét lại</button>
-      <button class="chip" id="chip-pause">Tạm dừng</button>
+      <button class="chip" id="chip-cam">Tắt camera</button>
       <button class="chip on" id="chip-sound">Âm báo</button>
     </div>
   </div>
@@ -354,6 +366,7 @@ function nowStr(){ const d=new Date(); return pad2(d.getHours())+":"+pad2(d.getM
 
 const WORK = document.createElement("canvas");
 const WCTX = WORK.getContext("2d", { willReadFrequently:true });
+const stage = document.querySelector(".stage");
 const NCAN = document.createElement("canvas");   // khung riêng cho bộ giải mã gốc
 const NCTX = NCAN.getContext("2d");
 
@@ -563,6 +576,11 @@ function handleHit(hit){
 
 /* Vòng lặp đồng bộ hoàn toàn — không await bất cứ thứ gì */
 function tick(){
+  /* Camera đã nhả thì thoát hẳn, KHÔNG lên lịch lại.
+     Nếu vẫn schedule() thì requestAnimationFrame quay 60 lần/giây làm việc rỗng,
+     đánh thức CPU liên tục — đúng thứ mà nút Tắt camera muốn tránh.
+     Mọi đường bật lại đều đi qua onMeta() nên vòng lặp tự sống lại. */
+  if (!currentStream) return;
   if (!scanActive || video.readyState < 2){ schedule(); return; }
   const t0 = performance.now();
 
@@ -623,6 +641,7 @@ function schedule(){
    ⚠ getCameras() giữ nguyên 100% logic liệt kê / ưu tiên camera như bản cũ.
    ================================================================== */
 function startCamera(deviceId = null){
+  if (camOff) return Promise.resolve();
   if (currentStream) currentStream.getTracks().forEach(t => t.stop());
   scanActive = false;
 
@@ -1270,14 +1289,13 @@ function onFound(raw){
   flash(parsed.title || parsed.badge);
 }
 
-let flashTimer = null;
 function flash(text){
   scanIndicator.textContent = "✓ " + String(text).slice(0, 34);
   scanIndicator.classList.add("hit");
   clearTimeout(flashTimer);
   flashTimer = setTimeout(() => {
     scanIndicator.classList.remove("hit");
-    scanIndicator.textContent = paused ? "Đã tạm dừng" : "Sẵn sàng — đưa mã vào khung";
+    scanIndicator.textContent = camOff ? "Camera đã tắt" : "Sẵn sàng — đưa mã vào khung";
   }, 2200);
 }
 
@@ -1431,14 +1449,46 @@ $("btn-export").onclick = () => {
   setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
 };
 
-let paused = false;
-$("chip-pause").onclick = e => {
-  paused = !paused;
-  e.currentTarget.classList.toggle("on", paused);
-  e.currentTarget.textContent = paused ? "Đang dừng" : "Tạm dừng";
-  scanActive = !paused;
-  scanIndicator.textContent = paused ? "Đã tạm dừng" : "Sẵn sàng — đưa mã vào khung";
-  if (!paused) schedule();
+/* Tắt camera = nhả hẳn phần cứng bằng track.stop().
+   Chỉ đặt cờ dừng quét thì trình duyệt vẫn giữ camera, đèn báo vẫn sáng, vẫn ăn pin. */
+let camOff = false, autoOff = false, flashTimer = null;
+
+function stopCamera(msg){
+  clearTimeout(flashTimer);
+  scanIndicator.classList.remove("hit");
+  if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+  currentStream = null; track = null;
+  try{ video.srcObject = null; }catch(e){}
+  scanActive = false;
+  if (overlay.width) octx.clearRect(0, 0, overlay.width, overlay.height);
+  $("zoom-box").style.display = "none";
+  $("focus-box").style.display = "none";
+  $("chip-torch").hidden = true;
+  $("chip-focus").hidden = true;
+  $("chip-torch").classList.remove("on");
+  stage.classList.add("off");
+  perfEl.textContent = "";
+  scanIndicator.textContent = msg;
+}
+
+function resumeCamera(msg){
+  clearTimeout(flashTimer);
+  scanIndicator.classList.remove("hit");
+  stage.classList.remove("off");
+  scanIndicator.textContent = msg;
+  pending = false;
+  /* Bật lại camera là hành động rõ ràng của người dùng — mở lại cổng chống trùng,
+     nếu không thì mã đang nằm sẵn trước ống kính sẽ không được đọc. */
+  armed = true; noCode = 0;
+  startCamera(cameraSelect.value || null);
+}
+
+$("chip-cam").onclick = e => {
+  camOff = !camOff;
+  e.currentTarget.classList.toggle("on", camOff);
+  e.currentTarget.textContent = camOff ? "Bật camera" : "Tắt camera";
+  if (camOff) stopCamera("Camera đã tắt — bấm “Bật camera” để quét tiếp");
+  else resumeCamera("Đang bật camera…");
 };
 $("chip-sound").onclick = e => e.currentTarget.classList.toggle("on");
 $("roi-slider").oninput = e => {
@@ -1462,11 +1512,15 @@ $("roi-slider").oninput = e => {
 })();
 
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden){ scanActive = false; }
-  else if (currentStream && !paused){
-    scanActive = true;
-    pending = false;   // callback cũ có thể đã chết khi tab ẩn — mở khoá để lên lịch lại
-    schedule();
+  if (document.hidden){
+    /* Ẩn tab mà vẫn giữ stream là camera chạy ngầm, đèn báo sáng, hao pin. Nhả hẳn. */
+    if (!camOff && currentStream){
+      autoOff = true;
+      stopCamera("Đã nhả camera khi rời ứng dụng");
+    }
+  } else if (autoOff && !camOff){
+    autoOff = false;
+    resumeCamera("Đang bật lại camera…");
   }
 });
 </script>
