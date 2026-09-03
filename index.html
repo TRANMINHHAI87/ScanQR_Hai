@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Quét QR CCCD &amp; VietQR — v2.6</title>
+<title>Quét QR CCCD &amp; VietQR — v2.7</title>
 <script src="jsQR.min.js"></script>
 <style>
 :root{
@@ -121,6 +121,8 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
 .badge.ok{background:var(--ok-soft);color:var(--ok)}
 .badge.plain{background:#eef1f6;color:var(--ink-2)}
 .card-head .time{margin-left:auto;font-size:12px;color:var(--ink-3);font-family:var(--mono)}
+.fmt{font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;background:#eef1f6;
+  color:var(--ink-2);font-family:var(--mono);letter-spacing:.3px}
 
 .fields{padding:4px 0}
 .f{display:flex;gap:12px;padding:11px 14px;border-bottom:1px solid #f0f3f7;align-items:flex-start}
@@ -213,7 +215,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
       <h1>Quét QR CCCD &amp; VietQR</h1>
       <div class="engine-tag" id="engine-tag">Đang khởi động…</div>
     </div>
-    <span class="ver">v2.6</span>
+    <span class="ver">v2.7</span>
   </div>
 </div>
 
@@ -236,7 +238,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
   <div class="result" id="result">
     <div class="card">
       <div class="card-head">
-        <span class="badge" id="r-badge">Dữ liệu</span>
+        <span class="badge" id="r-badge">Dữ liệu</span><span class="fmt" id="r-fmt" hidden></span>
         <span class="time" id="r-time"></span>
       </div>
       <div class="fields" id="r-fields"></div>
@@ -302,7 +304,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline
   </details>
 
   <div class="tip">
-    <b>Mã QR trên CCCD rất nhỏ</b> — mỗi ô của mã chỉ vài điểm ảnh. Giữ thẻ cách ống kính 12–18&nbsp;cm cho máy bắt nét, rồi kéo <b>Phóng ống kính</b> đến khi mã <b>lấp gần đầy ô vuông sáng</b>. Đó là yếu tố quyết định đọc được hay không.
+    <b>Mã QR trên CCCD rất nhỏ</b> — mỗi ô của mã chỉ vài điểm ảnh. Giữ thẻ cách ống kính 12–18&nbsp;cm cho máy bắt nét, rồi kéo <b>Phóng ống kính</b> đến khi mã <b>lấp gần đầy ô vuông sáng</b>. Đó là yếu tố quyết định đọc được hay không. Với <b>mã vạch ngang</b> (vé máy bay, mã sản phẩm) thì không cần vào ô vuông — cứ để mã trải hết bề ngang khung hình.
   </div>
 
   <div class="hist" id="hist" style="display:none">
@@ -383,6 +385,7 @@ let passIdx = 0;
 
 let detector = null;
 let nativeBusy = false, nativeSlow = 0, nativeErr = 0, nativeMs = 0;
+let nativeFormats = [], nativeFull = false;
 let hasJsQR = (typeof jsQR === "function");
 
 let currentStream = null;
@@ -400,13 +403,17 @@ async function initDetector(){
   if ("BarcodeDetector" in window){
     try{
       const fmts = await window.BarcodeDetector.getSupportedFormats();
-      if (fmts.includes("qr_code")){
-        detector = new window.BarcodeDetector({ formats:["qr_code"] });
-        name = "Native" + (hasJsQR ? " + jsQR" : "");
+      if (fmts.length){
+        /* Bật HẾT định dạng máy hỗ trợ, không bó lại mỗi qr_code.
+           Chrome Android đọc được cả PDF417 (vé máy bay), Code128, EAN, DataMatrix, Aztec…
+           jsQR thì chỉ biết mã QR, nên các loại kia hoàn toàn trông vào lớp này. */
+        detector = new window.BarcodeDetector({ formats: fmts });
+        nativeFormats = fmts;
+        name = "Native (" + fmts.length + " định dạng)" + (hasJsQR ? " + jsQR" : "");
       }
     }catch(e){ detector = null; }
   }
-  markEngine(detector ? name : (hasJsQR ? "jsQR — Chrome sẽ nhanh hơn nhiều" : "—"));
+  markEngine(detector ? name : (hasJsQR ? "jsQR — chỉ đọc mã QR, dùng Chrome để đọc thêm PDF417/EAN/Code128" : "—"));
   if (!detector && !hasJsQR){
     scanIndicator.textContent = "Thiếu jsQR.min.js — đặt file cạnh index.html";
   }
@@ -453,7 +460,7 @@ function paint(corners){
 
   const bx = r.x*f.s + f.ox, by = r.y*f.s + f.oy, bw = r.w*f.s, bh = r.h*f.s;
 
-  octx.fillStyle = "rgba(0,0,0,.42)";
+  octx.fillStyle = "rgba(0,0,0,.30)";
   octx.fillRect(0,0,W,by);
   octx.fillRect(0,by+bh,W,H-(by+bh));
   octx.fillRect(0,by,bx,bh);
@@ -530,16 +537,28 @@ function jsPass(p){
    Đưa ô vuông đã thu nhỏ thay vì cả khung 1080×1920 — nhanh hơn nhiều. */
 function nativeTry(){
   if (!detector || nativeBusy) return;
-  const r = roiRect(1); if (!r) return;
-  const k = Math.min(1, 720 / Math.max(r.w, r.h));
-  const dw = Math.max(1, Math.round(r.w*k)), dh = Math.max(1, Math.round(r.h*k));
+
+  /* Xen kẽ 2 kiểu lấy hình:
+     - ô vuông giữa khung: hợp mã QR nhỏ
+     - cả vùng đang hiện: BẮT BUỘC cho mã vạch ngang dài như PDF417 của vé máy bay,
+       vì ô vuông sẽ cắt cụt hai đầu mã. */
+  nativeFull = !nativeFull;
+  let rx, ry, rw, rh, target;
+  if (nativeFull){
+    const f = view(); if (!f) return;
+    rx=f.vx; ry=f.vy; rw=f.visW; rh=f.visH; target = 900;   // vạch PDF417 rất mảnh
+  } else {
+    const r = roiRect(1); if (!r) return;
+    rx=r.x; ry=r.y; rw=r.w; rh=r.h; target = 720;
+  }
+  const k = Math.min(1, target / Math.max(rw, rh));
+  const dw = Math.max(1, Math.round(rw*k)), dh = Math.max(1, Math.round(rh*k));
   if (dw < 8 || dh < 8) return;
   if (NCAN.width !== dw || NCAN.height !== dh){ NCAN.width = dw; NCAN.height = dh; }
-  NCTX.drawImage(video, Math.round(r.x),Math.round(r.y),Math.round(r.w),Math.round(r.h), 0,0,dw,dh);
+  NCTX.drawImage(video, Math.round(rx),Math.round(ry),Math.round(rw),Math.round(rh), 0,0,dw,dh);
 
   nativeBusy = true;
   const t0 = performance.now();
-  const rx = r.x, ry = r.y;
 
   detector.detect(NCAN).then(codes => {
     nativeBusy = false;
@@ -554,6 +573,7 @@ function nativeTry(){
     const c = codes[0];
     handleHit({
       data: c.rawValue,
+      fmt: c.format || "",
       corners: (c.cornerPoints || []).map(pt => ({ x: rx + pt.x/k, y: ry + pt.y/k }))
     });
   }).catch(() => {
@@ -571,7 +591,7 @@ function handleHit(hit){
   if (!armed && hit.data === lastRaw) return;
   armed = false;
   lastRaw = hit.data;
-  onFound(hit.data);
+  onFound(hit.data, hit.fmt || "qr_code");
 }
 
 /* Vòng lặp đồng bộ hoàn toàn — không await bất cứ thứ gì */
@@ -1245,8 +1265,88 @@ function parseText(raw){
                    {k:"Độ dài", v:t.length + " ký tự", sub:true}] };
 }
 
-function parseQR(raw){
-  return parseCCCD(raw) || parseEMV(raw) || parseWifi(raw) ||
+/* Thẻ lên máy bay IATA BCBP (Resolution 792). Các trường bắt buộc có vị trí cố định:
+   1 mã định dạng · 2 số chặng · 3-22 tên · 23 vé điện tử · 24-30 mã đặt chỗ
+   31-33 đi · 34-36 đến · 37-39 hãng · 40-44 số hiệu · 45-47 ngày Julian
+   48 hạng · 49-52 ghế · 53-57 số thứ tự · 58 trạng thái */
+const CABIN = {
+  F:"Hạng nhất", A:"Hạng nhất", P:"Hạng nhất",
+  J:"Thương gia", C:"Thương gia", D:"Thương gia", I:"Thương gia", Z:"Thương gia",
+  W:"Phổ thông đặc biệt",
+  Y:"Phổ thông", B:"Phổ thông", H:"Phổ thông", K:"Phổ thông", L:"Phổ thông",
+  M:"Phổ thông", N:"Phổ thông", Q:"Phổ thông", S:"Phổ thông", T:"Phổ thông",
+  V:"Phổ thông", X:"Phổ thông", G:"Phổ thông", U:"Phổ thông", E:"Phổ thông", R:"Phổ thông"
+};
+function julianToDate(n){
+  if (!(n >= 1 && n <= 366)) return null;
+  const now = new Date();
+  const mk = y => new Date(y, 0, n);
+  let d = mk(now.getFullYear());
+  /* Năm không nằm trong nhóm trường bắt buộc. Vé thường cho ngày gần hiện tại,
+     nên nếu lệch quá nửa năm về quá khứ thì đoán là năm sau. */
+  if ((now - d) / 86400000 > 183) d = mk(now.getFullYear() + 1);
+  return d;
+}
+function parseBoardingPass(raw){
+  if (!/^M[1-4]/.test(raw) || raw.length < 58) return null;
+  const at = (pos, len) => raw.substr(pos - 1, len);
+  const name = at(3, 20).trim();
+  if (!/^[A-Z]/i.test(name)) return null;
+  const et = at(23, 1);
+  if (et !== "E" && et !== " ") return null;
+
+  const strip0 = v => v.replace(/^0+(?=.)/, "");
+  const pnr = at(24, 7).trim(), from = at(31, 3).trim(), to = at(34, 3).trim();
+  const carrier = at(37, 3).trim(), flight = strip0(at(40, 5).trim());
+  const jul = parseInt(at(45, 3), 10), cabin = at(48, 1);
+  const seat = strip0(at(49, 4).trim()), seq = strip0(at(53, 5).trim());
+
+  const f = [];
+  const nm = name.split("/");
+  f.push({ k:"Hành khách", v: (nm[1] ? nm[1].trim() + " " + nm[0].trim() : name),
+           big:true, copy:name, note: nm.length > 1 ? "họ: " + nm[0].trim() : "" });
+  f.push({ k:"Chặng bay", v: from + " → " + to, big:true, num:true, copy: from + to });
+  if (carrier || flight)
+    f.push({ k:"Chuyến bay", v: (carrier + " " + flight).trim(), num:true, big:true,
+             copy:(carrier + flight).trim() });
+  const d = julianToDate(jul);
+  if (d) f.push({ k:"Ngày bay", v: pad2(d.getDate()) + "/" + pad2(d.getMonth()+1) + "/" + d.getFullYear(),
+                  num:true, note:"ngày thứ " + jul + " trong năm — mã không chứa năm, đây là suy đoán" });
+  if (seat)  f.push({ k:"Chỗ ngồi", v:seat, num:true, big:true, copy:seat });
+  if (cabin && cabin !== " ")
+    f.push({ k:"Hạng ghế", v: CABIN[cabin.toUpperCase()] || "Không rõ", note:"mã hạng: " + cabin });
+  if (pnr) f.push({ k:"Mã đặt chỗ (PNR)", v:pnr, num:true, copy:pnr,
+                    note:"Đây là trường nhạy cảm nhất — tra được cả hành trình và thông tin liên hệ. Đừng chia sẻ ảnh thẻ lên mạng." });
+  if (seq) f.push({ k:"Số thứ tự check-in", v:seq, num:true });
+  const legs = +raw[1];
+  if (legs > 1) f.push({ k:"Số chặng trong mã", v:legs + " chặng",
+                         note:"Chỉ hiển thị chặng đầu; các chặng sau nằm trong dữ liệu gốc." });
+  return { type:"bcbp", badge:"Thẻ lên máy bay", badgeClass:"", title:name, fields:f };
+}
+
+/* Mã sản phẩm 1D: EAN/UPC/ITF — chỉ là dãy số, không có cấu trúc để bóc */
+const FMT_NAME = {
+  qr_code:"QR", pdf417:"PDF417", aztec:"Aztec", data_matrix:"DataMatrix",
+  code_128:"Code 128", code_39:"Code 39", code_93:"Code 93", codabar:"Codabar",
+  itf:"ITF", ean_13:"EAN-13", ean_8:"EAN-8", upc_a:"UPC-A", upc_e:"UPC-E"
+};
+const EAN_CC = { "893":"Việt Nam", "884":"Campuchia", "885":"Thái Lan", "888":"Singapore",
+  "890":"Ấn Độ", "899":"Indonesia", "955":"Malaysia", "690":"Trung Quốc", "691":"Trung Quốc",
+  "692":"Trung Quốc", "693":"Trung Quốc", "694":"Trung Quốc", "695":"Trung Quốc",
+  "880":"Hàn Quốc", "471":"Đài Loan", "489":"Hồng Kông", "00":"Mỹ / Canada", "45":"Nhật Bản", "49":"Nhật Bản" };
+function parseProduct(raw, fmt){
+  if (!/^(ean_13|ean_8|upc_a|upc_e|itf)$/.test(fmt || "")) return null;
+  if (!/^\d+$/.test(raw)) return null;
+  const f = [{ k:"Mã sản phẩm", v:raw, num:true, big:true, copy:raw }];
+  const cc = EAN_CC[raw.slice(0,3)] || EAN_CC[raw.slice(0,2)];
+  if (cc) f.push({ k:"Nơi cấp mã", v:cc, note:"theo đầu số GS1 — là nơi doanh nghiệp đăng ký mã, không chắc là nơi sản xuất" });
+  f.push({ k:"Loại mã", v:FMT_NAME[fmt] || fmt });
+  return { type:"product", badge:"Mã sản phẩm", badgeClass:"plain", title:raw, fields:f };
+}
+
+function parseQR(raw, fmt){
+  return parseBoardingPass(raw) || parseProduct(raw, fmt) ||
+         parseCCCD(raw) || parseEMV(raw) || parseWifi(raw) ||
          parseContact(raw) || parseSimple(raw) || parsePipe(raw) || parseText(raw);
 }
 
@@ -1272,8 +1372,9 @@ function beep(){
   if (navigator.vibrate) navigator.vibrate(55);
 }
 
-function onFound(raw){
-  const parsed = parseQR(raw);
+function onFound(raw, fmt){
+  const parsed = parseQR(raw, fmt);
+  parsed.fmt = fmt || "qr_code";
   parsed.raw = raw;
   parsed.at = nowStr();
   current = parsed;
@@ -1302,6 +1403,9 @@ function flash(text){
 function render(p){
   $("r-badge").textContent = p.badge;
   $("r-badge").className = "badge " + (p.badgeClass || "");
+  const fe = $("r-fmt");
+  if (p.fmt && p.fmt !== "qr_code"){ fe.hidden = false; fe.textContent = FMT_NAME[p.fmt] || p.fmt; }
+  else fe.hidden = true;
   $("r-time").textContent = p.at;
   $("r-raw").textContent = p.raw;
 
